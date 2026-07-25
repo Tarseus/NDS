@@ -1,0 +1,153 @@
+task=cvrp_1000
+run_dir=/data1/gushengda/NDS_runs_fisher_dpp/nds_cvrp_1000
+config=cvrp_1000.yaml
+gpu=2
+repo=/data1/gushengda/NDS_fisher_dpp
+commit=44766e090c575876b47c741d84016cb14ee2a269
+started_at=2026-07-25T08:07:35+00:00
+[2026-07-25 08:07:37] train.py(60) : ================================================================================
+Configuration
+================================================================================
+env_params:
+  problem: cvrp
+  problem_size: 1000
+  num_nodes_to_remove: 15
+  iterations_per_instance: 100
+  recreate_n: 5
+  beta: 0
+  insert_in_new_tours_only: true
+  num_processes: 8
+  generator_params:
+    use_X_generator: false
+    rootPos: 2
+    custPos: 2
+    demandType: 2
+    avgRouteSize: 3
+  starting_solution_params:
+    nb_iterations: 100
+    nb_nodes_ratio: 0.25
+model_params:
+  problem: ${env_params.problem}
+  embedding_dim: 128
+  poly_embedding_dim: 256
+  sqrt_embedding_dim: 11.3137
+  encoder_layer_num: 2
+  tour_layer: true
+  message_passing_layer_num: 1
+  encoder_layer_num_2: 2
+  qkv_dim: 16
+  head_num: 8
+  logit_clipping: 10
+  ff_hidden_dim: 512
+  eval_type: softmax
+  z_dim: 10
+optimizer_params:
+  optimizer:
+    lr: 0.0001
+    weight_decay: 1.0e-06
+  scheduler:
+    milestones:
+    - 8001
+    - 8051
+    gamma: 0.1
+trainer_params:
+  use_cuda: true
+  cuda_device_num: 0
+  reward_type: i
+  epochs: 2000
+  iterations_per_epoch: 150000
+  train_batch_size: 64
+  grad_acc_iterations: ${env_params.iterations_per_instance}
+  rollout_size: 128
+  dpp_objective:
+    enabled: true
+    subset_size: 16
+    reward_ema_decay: 0.99
+    reward_eps: 1.0e-08
+    reward_clip: 10.0
+    feature_eps: 1.0e-12
+    match_nds_gradient_scale: true
+  nb_skipped_iterations: 10
+  prev_model_path: None
+  model_save_interval: 10
+  model_load:
+    enable: false
+    path: null
+    epoch: null
+  valid_episodes: 1000
+  valid_iterations: 50
+  valid_batch_size: 50
+  valid_rollout_size: 100
+  valid_augmentation_enable: true
+  valid_aug_factor: 8
+  valid_data_load:
+    enable: true
+    filename: data/cvrp/vrp1000_valid_seed1233.pkl
+logger_params:
+  desc: train_cvrp_1000
+  wandb:
+    enable: true
+    project: NDS
+  filepath: /data1/gushengda/NDS_runs_fisher_dpp/nds_cvrp_1000
+  filename: log.txt
+================================================================================
+[2026-07-25 08:07:38] checksum.py(46) : Failed to find compiled extension; rebuilding.
+[2026-07-25 08:07:38] checksum.py(46) : Failed to find compiled extension; rebuilding.
+[2026-07-25 08:07:38] checksum.py(46) : Failed to find compiled extension; rebuilding.
+[2026-07-25 08:07:38] checksum.py(46) : Failed to find compiled extension; rebuilding.
+[2026-07-25 08:07:38] checksum.py(46) : Failed to find compiled extension; rebuilding.
+[2026-07-25 08:07:38] checksum.py(46) : Failed to find compiled extension; rebuilding.
+[2026-07-25 08:07:38] checksum.py(46) : Failed to find compiled extension; rebuilding.
+[2026-07-25 08:07:38] checksum.py(46) : Failed to find compiled extension; rebuilding.
+[2026-07-25 08:07:39] checksum.py(46) : Failed to find compiled extension; rebuilding.
+[2026-07-25 08:07:39] checksum.py(46) : Failed to find compiled extension; rebuilding.
+[2026-07-25 08:07:39] checksum.py(46) : Failed to find compiled extension; rebuilding.
+wandb: WARNING Path /data1/gushengda/NDS_runs_fisher_dpp/nds_cvrp_1000/wandb/wandb/ wasn't writable, using system temp directory.
+[2026-07-25 08:07:39] checksum.py(46) : Failed to find compiled extension; rebuilding.
+[2026-07-25 08:07:39] checksum.py(46) : Failed to find compiled extension; rebuilding.
+wandb: Using wandb-core as the SDK backend.  Please refer to https://wandb.me/wandb-core for more information.
+[2026-07-25 08:07:39] checksum.py(46) : Failed to find compiled extension; rebuilding.
+[2026-07-25 08:07:39] checksum.py(46) : Failed to find compiled extension; rebuilding.
+[2026-07-25 08:07:39] checksum.py(46) : Failed to find compiled extension; rebuilding.
+wandb: WARNING `resume` will be ignored since W&B syncing is set to `offline`. Starting a new run with run id ejjodjih.
+wandb: Tracking run with wandb version 0.19.2
+wandb: W&B syncing is set to `offline` in this directory.  
+wandb: Run `wandb online` or set WANDB_MODE=online to enable cloud syncing.
+[2026-07-25 08:07:40] trainer.py(190) : ================================================================================
+/data1/gushengda/NDS_fisher_dpp/src/cpp/cvrp/Instance.cpp: In constructor ‘Instance::Instance(int, int, const std::vector<int>&, const std::vector<std::vector<float> >&)’:
+/data1/gushengda/NDS_fisher_dpp/src/cpp/cvrp/Instance.cpp:16:23: warning: comparison of integer expressions of different signedness: ‘std::vector<int>::size_type’ {aka ‘long unsigned int’} and ‘int’ [-Wsign-compare]
+   16 |     if (demand.size() != numNodes) {
+      |         ~~~~~~~~~~~~~~^~~~~~~~~~~
+/data1/gushengda/NDS_fisher_dpp/src/cpp/cvrp/Solution.cpp: In member function ‘std::unordered_set<int> ModifiedSolution::destroy(float, int, float)’:
+/data1/gushengda/NDS_fisher_dpp/src/cpp/cvrp/Solution.cpp:219:22: warning: comparison of integer expressions of different signedness: ‘std::unordered_set<Tour*>::size_type’ {aka ‘long unsigned int’} and ‘int’ [-Wsign-compare]
+  219 |         if (R.size() >= ks) {
+      |             ~~~~~~~~~^~~~~
+/data1/gushengda/NDS_fisher_dpp/src/cpp/cvrp/Solution.cpp: In member function ‘void ModifiedSolution::repair(const std::vector<int>&, float, bool)’:
+/data1/gushengda/NDS_fisher_dpp/src/cpp/cvrp/Solution.cpp:295:35: warning: comparison of integer expressions of different signedness: ‘int’ and ‘std::vector<Tour>::size_type’ {aka ‘long unsigned int’} [-Wsign-compare]
+  295 |         for (int t_idx = 0; t_idx < originalSolution.tours.size(); ++t_idx) {
+      |                             ~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/data1/gushengda/NDS_fisher_dpp/src/cpp/cvrp/Solution.cpp:319:51: warning: comparison of integer expressions of different signedness: ‘int’ and ‘std::vector<int>::size_type’ {aka ‘long unsigned int’} [-Wsign-compare]
+  319 |                     for (int new_pos = 0; new_pos < tour.nodes.size(); ++new_pos) {
+      |                                           ~~~~~~~~^~~~~~~~~~~~~~~~~~~
+/data1/gushengda/NDS_fisher_dpp/src/cpp/cvrp/Solution.cpp:354:35: warning: comparison of integer expressions of different signedness: ‘int’ and ‘std::vector<Tour>::size_type’ {aka ‘long unsigned int’} [-Wsign-compare]
+  354 |         for (int t_idx = 0; t_idx < newTours.size(); ++t_idx) {
+      |                             ~~~~~~^~~~~~~~~~~~~~~~~
+/data1/gushengda/NDS_fisher_dpp/src/cpp/cvrp/Solution.cpp:362:47: warning: comparison of integer expressions of different signedness: ‘int’ and ‘std::vector<int>::size_type’ {aka ‘long unsigned int’} [-Wsign-compare]
+  362 |                 for (int new_pos = 0; new_pos < tour.nodes.size(); ++new_pos) {
+      |                                       ~~~~~~~~^~~~~~~~~~~~~~~~~~~
+/data1/gushengda/NDS_fisher_dpp/src/cpp/cvrp/Tour.cpp: In member function ‘void Tour::updateCostAndDemand(const Instance&)’:
+/data1/gushengda/NDS_fisher_dpp/src/cpp/cvrp/Tour.cpp:20:27: warning: comparison of integer expressions of different signedness: ‘int’ and ‘std::vector<int>::size_type’ {aka ‘long unsigned int’} [-Wsign-compare]
+   20 |         for (int j = 0; j < nodes.size() - 1; ++j) {
+      |                         ~~^~~~~~~~~~~~~~~~~~
+/data1/gushengda/anaconda3/envs/rlco1/lib/python3.11/site-packages/torch/autograd/graph.py:825: UserWarning: cuDNN SDPA backward got grad_output.strides() != output.strides(), attempting to materialize a grad_output with matching strides... (Triggered internally at /opt/conda/conda-bld/pytorch_1727971040866/work/aten/src/ATen/native/cudnn/MHA.cpp:674.)
+  return Variable._execution_engine.run_backward(  # Calls into the C++ engine to run the backward pass
+[2026-07-25 08:08:30] trainer.py(557) : Epoch   1  |  Train 6400/150000 (  4.3%)  |  Reward: 0.0111  |  Loss: 0.0008  |  Improved: 0.843  |  Positive: 0.110  |  DPP:  0.186  |  Sim: 0.989  |  Cost:   46.21
+[2026-07-25 08:09:19] trainer.py(557) : Epoch   1  |  Train 12800/150000 (  8.5%)  |  Reward: 0.0125  |  Loss: 0.0009  |  Improved: 0.881  |  Positive: 0.129  |  DPP:  0.297  |  Sim: 0.988  |  Cost:   46.98
+[2026-07-25 08:09:54] trainer.py(557) : Epoch   1  |  Train 19200/150000 ( 12.8%)  |  Reward: 0.0122  |  Loss: 0.0008  |  Improved: 0.886  |  Positive: 0.133  |  DPP:  0.338  |  Sim: 0.987  |  Cost:   47.49
+[2026-07-25 08:10:32] trainer.py(557) : Epoch   1  |  Train 25600/150000 ( 17.1%)  |  Reward: 0.0121  |  Loss: 0.0008  |  Improved: 0.887  |  Positive: 0.135  |  DPP:  0.367  |  Sim: 0.987  |  Cost:   47.30
+[2026-07-25 08:11:09] trainer.py(557) : Epoch   1  |  Train 32000/150000 ( 21.3%)  |  Reward: 0.0119  |  Loss: 0.0008  |  Improved: 0.878  |  Positive: 0.134  |  DPP:  0.368  |  Sim: 0.987  |  Cost:   47.17
+[2026-07-25 08:11:45] trainer.py(557) : Epoch   1  |  Train 38400/150000 ( 25.6%)  |  Reward: 0.0118  |  Loss: 0.0007  |  Improved: 0.880  |  Positive: 0.135  |  DPP:  0.369  |  Sim: 0.986  |  Cost:   47.28
+[2026-07-25 08:12:36] trainer.py(557) : Epoch   1  |  Train 44800/150000 ( 29.9%)  |  Reward: 0.0118  |  Loss: 0.0008  |  Improved: 0.882  |  Positive: 0.137  |  DPP:  0.375  |  Sim: 0.986  |  Cost:   47.41
+[2026-07-25 08:13:29] trainer.py(557) : Epoch   1  |  Train 51200/150000 ( 34.1%)  |  Reward: 0.0118  |  Loss: 0.0008  |  Improved: 0.885  |  Positive: 0.139  |  DPP:  0.375  |  Sim: 0.986  |  Cost:   47.43
+[2026-07-25 08:14:21] trainer.py(557) : Epoch   1  |  Train 57600/150000 ( 38.4%)  |  Reward: 0.0117  |  Loss: 0.0008  |  Improved: 0.882  |  Positive: 0.140  |  DPP:  0.371  |  Sim: 0.986  |  Cost:   47.38
+[2026-07-25 08:15:14] trainer.py(557) : Epoch   1  |  Train 64000/150000 ( 42.7%)  |  Reward: 0.0118  |  Loss: 0.0008  |  Improved: 0.884  |  Positive: 0.144  |  DPP:  0.377  |  Sim: 0.985  |  Cost:   47.44

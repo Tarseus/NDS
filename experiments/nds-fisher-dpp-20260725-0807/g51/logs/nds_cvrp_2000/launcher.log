@@ -1,0 +1,11 @@
+task=cvrp_2000
+run_dir=/data1/gushengda/NDS_runs_fisher_dpp/nds_cvrp_2000
+config=cvrp_2000.yaml
+gpu=7
+repo=/data1/gushengda/NDS_fisher_dpp
+commit=44766e090c575876b47c741d84016cb14ee2a269
+started_at=2026-07-25T08:07:35+00:00
+waiting_for=/data1/gushengda/NDS_runs_fisher_dpp/nds_cvrp_1000/checkpoint-1500.pt
+wait_status=2026-07-25T08:07:35+00:00 checkpoint_missing=/data1/gushengda/NDS_runs_fisher_dpp/nds_cvrp_1000/checkpoint-1500.pt
+wait_status=2026-07-25T08:12:35+00:00 checkpoint_missing=/data1/gushengda/NDS_runs_fisher_dpp/nds_cvrp_1000/checkpoint-1500.pt
+wait_status=2026-07-25T08:17:35+00:00 checkpoint_missing=/data1/gushengda/NDS_runs_fisher_dpp/nds_cvrp_1000/checkpoint-1500.pt
