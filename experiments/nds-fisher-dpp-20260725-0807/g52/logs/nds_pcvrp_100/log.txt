@@ -1,0 +1,120 @@
+[2026-07-25 08:07:37] train.py(60) : ================================================================================
+Configuration
+================================================================================
+env_params:
+  problem: pcvrp
+  problem_size: 100
+  num_nodes_to_remove: 15
+  iterations_per_instance: 100
+  recreate_n: 5
+  beta: 0
+  insert_in_new_tours_only: true
+  num_processes: 8
+  generator_params:
+    use_X_generator: true
+    rootPos: 2
+    custPos: 2
+    demandType: 2
+    avgRouteSize: 3
+    prizes_min: 0.1
+    prizes_max: 0.2
+    prizes_alpha: 0.5
+  starting_solution_params:
+    nb_iterations: 50
+    nb_nodes_ratio: 0.15
+model_params:
+  problem: ${env_params.problem}
+  embedding_dim: 128
+  poly_embedding_dim: 256
+  sqrt_embedding_dim: 11.3137
+  encoder_layer_num: 2
+  tour_layer: true
+  message_passing_layer_num: 1
+  encoder_layer_num_2: 2
+  qkv_dim: 16
+  head_num: 8
+  logit_clipping: 10
+  ff_hidden_dim: 512
+  eval_type: softmax
+  z_dim: 10
+optimizer_params:
+  optimizer:
+    lr: 0.0001
+    weight_decay: 1.0e-06
+  scheduler:
+    milestones:
+    - 8001
+    - 8051
+    gamma: 0.1
+trainer_params:
+  use_cuda: true
+  cuda_device_num: 0
+  reward_type: i
+  epochs: 2000
+  iterations_per_epoch: 150000
+  train_batch_size: 64
+  grad_acc_iterations: ${env_params.iterations_per_instance}
+  rollout_size: 128
+  dpp_objective:
+    enabled: true
+    subset_size: 16
+    reward_ema_decay: 0.99
+    reward_eps: 1.0e-08
+    reward_clip: 10.0
+    feature_eps: 1.0e-12
+    match_nds_gradient_scale: true
+  nb_skipped_iterations: 10
+  prev_model_path: None
+  model_save_interval: 10
+  model_load:
+    enable: false
+    path: null
+    epoch: null
+  valid_episodes: 1000
+  valid_iterations: 50
+  valid_batch_size: 50
+  valid_rollout_size: 100
+  valid_augmentation_enable: true
+  valid_aug_factor: 8
+  valid_data_load:
+    enable: true
+    filename: data/pcvrp/pcvrp100_valid_seed1233_2_2_2_3_0.1_0.2_0.5.pt
+logger_params:
+  desc: train_pcvrp_100
+  wandb:
+    enable: true
+    project: NDS
+  filepath: /data1/gushengda/NDS_runs_fisher_dpp/nds_pcvrp_100
+  filename: log.txt
+================================================================================
+[2026-07-25 08:07:37] checksum.py(46) : Failed to find compiled extension; rebuilding.
+[2026-07-25 08:07:37] checksum.py(46) : Failed to find compiled extension; rebuilding.
+[2026-07-25 08:07:37] checksum.py(46) : Failed to find compiled extension; rebuilding.
+[2026-07-25 08:07:37] checksum.py(46) : Failed to find compiled extension; rebuilding.
+[2026-07-25 08:07:37] checksum.py(46) : Failed to find compiled extension; rebuilding.
+[2026-07-25 08:07:37] checksum.py(46) : Failed to find compiled extension; rebuilding.
+[2026-07-25 08:07:37] checksum.py(46) : Failed to find compiled extension; rebuilding.
+[2026-07-25 08:07:37] checksum.py(46) : Failed to find compiled extension; rebuilding.
+[2026-07-25 08:07:38] checksum.py(46) : Failed to find compiled extension; rebuilding.
+[2026-07-25 08:07:38] checksum.py(46) : Failed to find compiled extension; rebuilding.
+[2026-07-25 08:07:38] checksum.py(46) : Failed to find compiled extension; rebuilding.
+[2026-07-25 08:07:38] checksum.py(46) : Failed to find compiled extension; rebuilding.
+[2026-07-25 08:07:38] checksum.py(46) : Failed to find compiled extension; rebuilding.
+[2026-07-25 08:07:38] checksum.py(46) : Failed to find compiled extension; rebuilding.
+[2026-07-25 08:07:38] checksum.py(46) : Failed to find compiled extension; rebuilding.
+[2026-07-25 08:07:38] checksum.py(46) : Failed to find compiled extension; rebuilding.
+[2026-07-25 08:07:39] trainer.py(190) : ================================================================================
+[2026-07-25 08:07:49] checksum.py(38) : The extension is missing the trailer tag and thus is missing its checksum; rebuilding.
+[2026-07-25 08:08:08] trainer.py(557) : Epoch   1  |  Train 6400/150000 (  4.3%)  |  Reward: 0.0026  |  Loss: 0.0002  |  Improved: 0.138  |  Positive: 0.006  |  DPP:  0.030  |  Sim: 0.981  |  Cost:   10.69
+[2026-07-25 08:08:26] trainer.py(557) : Epoch   1  |  Train 12800/150000 (  8.5%)  |  Reward: 0.0026  |  Loss: 0.0001  |  Improved: 0.131  |  Positive: 0.006  |  DPP:  0.031  |  Sim: 0.981  |  Cost:   11.09
+[2026-07-25 08:08:44] trainer.py(557) : Epoch   1  |  Train 19200/150000 ( 12.8%)  |  Reward: 0.0023  |  Loss: 0.0001  |  Improved: 0.126  |  Positive: 0.006  |  DPP:  0.030  |  Sim: 0.981  |  Cost:   10.85
+[2026-07-25 08:09:02] trainer.py(557) : Epoch   1  |  Train 25600/150000 ( 17.1%)  |  Reward: 0.0025  |  Loss: 0.0001  |  Improved: 0.122  |  Positive: 0.006  |  DPP:  0.032  |  Sim: 0.981  |  Cost:   10.66
+[2026-07-25 08:09:20] trainer.py(557) : Epoch   1  |  Train 32000/150000 ( 21.3%)  |  Reward: 0.0026  |  Loss: 0.0001  |  Improved: 0.122  |  Positive: 0.006  |  DPP:  0.033  |  Sim: 0.981  |  Cost:   10.75
+[2026-07-25 08:09:38] trainer.py(557) : Epoch   1  |  Train 38400/150000 ( 25.6%)  |  Reward: 0.0025  |  Loss: 0.0001  |  Improved: 0.123  |  Positive: 0.006  |  DPP:  0.033  |  Sim: 0.981  |  Cost:   10.67
+[2026-07-25 08:09:56] trainer.py(557) : Epoch   1  |  Train 44800/150000 ( 29.9%)  |  Reward: 0.0025  |  Loss: 0.0002  |  Improved: 0.122  |  Positive: 0.006  |  DPP:  0.034  |  Sim: 0.982  |  Cost:   10.60
+[2026-07-25 08:10:14] trainer.py(557) : Epoch   1  |  Train 51200/150000 ( 34.1%)  |  Reward: 0.0025  |  Loss: 0.0002  |  Improved: 0.122  |  Positive: 0.006  |  DPP:  0.034  |  Sim: 0.982  |  Cost:   10.58
+[2026-07-25 08:10:31] trainer.py(557) : Epoch   1  |  Train 57600/150000 ( 38.4%)  |  Reward: 0.0025  |  Loss: 0.0002  |  Improved: 0.123  |  Positive: 0.006  |  DPP:  0.035  |  Sim: 0.982  |  Cost:   10.54
+[2026-07-25 08:10:49] trainer.py(557) : Epoch   1  |  Train 64000/150000 ( 42.7%)  |  Reward: 0.0025  |  Loss: 0.0002  |  Improved: 0.122  |  Positive: 0.006  |  DPP:  0.035  |  Sim: 0.981  |  Cost:   10.50
+[2026-07-25 08:15:03] trainer.py(576) : Epoch   1  |  Reward: 0.0025  |  Loss: 0.0002  |  Improved: 0.117  |  Positive: 0.007  |  DPP:  0.036  |  Sim: 0.980  |  Cost:   10.45
+[2026-07-25 08:15:03] trainer.py(618) : Epoch   1/2000  |  Elapsed: 7.40m  |  Remain: 246.51h
+[2026-07-25 08:15:03] trainer.py(190) : ================================================================================
