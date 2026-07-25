@@ -19,6 +19,12 @@ from .logging_utils import (
 )
 from .validator import Validator
 from .seed_sampler import SeedVectorSampler
+from .fisher_dpp import (
+    fisher_volume_loss,
+    gather_rollouts,
+    route_sqrt_features,
+    sample_rollout_subset,
+)
 import wandb
 
 
@@ -65,6 +71,23 @@ class Trainer:
         # Training parameters
         self.batch_size = self.trainer_params["train_batch_size"]
         self.rollout_size = self.trainer_params["rollout_size"]
+        dpp_params = self.trainer_params.get("dpp_objective", {})
+        self.dpp_enabled = bool(dpp_params.get("enabled", False))
+        self.dpp_subset_size = int(dpp_params.get("subset_size", 16))
+        self.dpp_reward_ema_decay = float(
+            dpp_params.get("reward_ema_decay", 0.99)
+        )
+        self.dpp_reward_eps = float(dpp_params.get("reward_eps", 1e-8))
+        self.dpp_reward_clip = float(dpp_params.get("reward_clip", 10.0))
+        self.dpp_feature_eps = float(dpp_params.get("feature_eps", 1e-12))
+        self.dpp_match_nds_gradient_scale = bool(
+            dpp_params.get("match_nds_gradient_scale", True)
+        )
+        self.dpp_reward_ema = None
+        if self.dpp_enabled and self.dpp_subset_size > self.rollout_size:
+            raise ValueError(
+                "dpp_objective.subset_size cannot exceed trainer rollout_size"
+            )
 
         # Seed vector sampler
         self.seed_sampler = SeedVectorSampler(model_params["z_dim"], self.device)
@@ -114,6 +137,9 @@ class Trainer:
             )
             self.model.load_state_dict(checkpoint["model_state_dict"])
             self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+            self.dpp_reward_ema = checkpoint.get("dpp_reward_ema")
+            if self.dpp_reward_ema is not None:
+                self.dpp_reward_ema = self.dpp_reward_ema.to(self.device)
             self.logger.info(f"Loaded model from {checkpoint_path}")
 
         # Auto-resume from latest if exists
@@ -127,6 +153,9 @@ class Trainer:
             self.scheduler.last_epoch = checkpoint["epoch"] - 1
             self.start_epoch = 1 + checkpoint["epoch"]
             self.wandb_run_id = checkpoint.get("wandb_run_id")
+            self.dpp_reward_ema = checkpoint.get("dpp_reward_ema")
+            if self.dpp_reward_ema is not None:
+                self.dpp_reward_ema = self.dpp_reward_ema.to(self.device)
             self.logger.info(f"Resuming from epoch {self.start_epoch}")
 
     def _init_wandb(
@@ -200,6 +229,11 @@ class Trainer:
             "loss": AverageMeter(),
             "reward": AverageMeter(),
             "improved_frac": AverageMeter(),
+            "positive_rollout_frac": AverageMeter(),
+            "dpp_logdet": AverageMeter(),
+            "dpp_marginal": AverageMeter(),
+            "dpp_similarity": AverageMeter(),
+            "dpp_gradient_scale": AverageMeter(),
         }
         final_costs = []
         processed_iters = 0
@@ -255,8 +289,8 @@ class Trainer:
             np.mean(final_costs),
         )
 
-    def _train_one_batch(self, batch_size: int) -> Tuple[float, float, float, int]:
-        """Train on one batch and return (score, loss, reward, nb_improved)."""
+    def _train_one_batch(self, batch_size: int) -> Dict[str, float]:
+        """Train on one batch and return scalar training diagnostics."""
         self.model.train()
 
         # Reset environment and get state
@@ -271,7 +305,7 @@ class Trainer:
             self.model.pre_forward(reset_state, z)
 
         # Perform rollout
-        step_probs = self._perform_rollout(state)
+        step_probs, first_step_probs = self._perform_rollout(state)
         selected_nodes = (
             self.env.selected_node_list.cpu().numpy()
         )  # Selected customer nodes for removal
@@ -280,7 +314,21 @@ class Trainer:
         reward = self._compute_reward(
             selected_nodes
         )  # Calculate reward by removing and reinserting customers
-        loss = self._compute_policy_loss(reward, step_probs, batch_size)
+        dpp_diagnostics = {
+            "logdet": reward.new_zeros(()),
+            "marginal": reward.new_zeros(()),
+            "similarity": reward.new_zeros(()),
+            "gradient_scale": reward.new_zeros(()),
+        }
+        if self.dpp_enabled:
+            loss, dpp_diagnostics = self._compute_dpp_policy_loss(
+                reward,
+                step_probs,
+                first_step_probs,
+                reset_state.tour_index,
+            )
+        else:
+            loss = self._compute_policy_loss(reward, step_probs, batch_size)
 
         # Backward pass
         self.scaler.scale(loss).backward()
@@ -290,20 +338,36 @@ class Trainer:
         score_mean = max_reward.float().mean()
         nb_improved = (max_reward > 1e-5).sum().item()
 
-        return score_mean.item(), loss.item(), reward.mean().item(), nb_improved
+        return {
+            "score": score_mean.item(),
+            "loss": loss.item(),
+            "reward": reward.mean().item(),
+            "improved_frac": nb_improved / batch_size,
+            "positive_rollout_frac": (reward > 1e-5).float().mean().item(),
+            "dpp_logdet": dpp_diagnostics["logdet"].item(),
+            "dpp_marginal": dpp_diagnostics["marginal"].item(),
+            "dpp_similarity": dpp_diagnostics["similarity"].item(),
+            "dpp_gradient_scale": dpp_diagnostics["gradient_scale"].item(),
+        }
 
-    def _perform_rollout(self, state) -> torch.Tensor:
-        """Perform environment rollout and return step probabilities."""
+    def _perform_rollout(self, state) -> Tuple[torch.Tensor, torch.Tensor]:
+        """Return selected-action probabilities and the first full distribution."""
         step_probs = []
+        first_step_probs = None
         done = False
 
         while not done:
             with torch.amp.autocast(device_type=self.device.type):
-                selected, prob, _ = self.model(state)
+                selected, prob, all_probs = self.model(state)
+            if first_step_probs is None:
+                first_step_probs = all_probs
             state, done = self.env.step(selected)
             step_probs.append(prob)
 
-        return torch.stack(step_probs, dim=2)  # (batch, rollout, steps)
+        return (
+            torch.stack(step_probs, dim=2),
+            first_step_probs,
+        )  # (batch, rollout, steps), (batch, rollout, customers)
 
     def _compute_reward(self, selected_nodes: np.ndarray) -> torch.Tensor:
         """Compute reward via destroy-and-repair heuristic."""
@@ -366,6 +430,77 @@ class Trainer:
         loss = -(advantage * log_prob * top1_mask).mean()
         return loss
 
+    def _compute_dpp_policy_loss(
+        self,
+        reward: torch.Tensor,
+        step_probs: torch.Tensor,
+        first_step_probs: torch.Tensor,
+        tour_index: torch.Tensor,
+    ) -> Tuple[torch.Tensor, Dict[str, torch.Tensor]]:
+        """Compute the quality-weighted Fisher-volume policy objective."""
+        with torch.no_grad():
+            positive_mask = (reward > 1e-5).float()
+            positive_count = positive_mask.sum()
+            batch_scale = (
+                reward.float() * positive_mask
+            ).sum() / positive_count.clamp_min(1.0)
+            has_positive = positive_count > 0
+            if self.dpp_reward_ema is None:
+                self.dpp_reward_ema = torch.where(
+                    has_positive,
+                    batch_scale,
+                    reward.new_tensor(1.0, dtype=torch.float32),
+                )
+            else:
+                decay = self.dpp_reward_ema_decay
+                updated_ema = (
+                    decay * self.dpp_reward_ema
+                    + (1.0 - decay) * batch_scale
+                )
+                self.dpp_reward_ema = torch.where(
+                    has_positive,
+                    updated_ema,
+                    self.dpp_reward_ema,
+                )
+
+            subset_index = sample_rollout_subset(
+                reward.size(0),
+                self.rollout_size,
+                self.dpp_subset_size,
+                reward.device,
+            )
+            quality = gather_rollouts(reward.float(), subset_index)
+            quality = quality / self.dpp_reward_ema.clamp_min(self.dpp_reward_eps)
+            quality = quality.clamp(max=self.dpp_reward_clip)
+
+        subset_probs = gather_rollouts(first_step_probs, subset_index)
+        features, _ = route_sqrt_features(
+            subset_probs,
+            tour_index,
+            eps=self.dpp_feature_eps,
+        )
+        trajectory_log_prob = gather_rollouts(
+            step_probs.clamp_min(self.dpp_reward_eps).log().sum(dim=2),
+            subset_index,
+        )
+        loss, diagnostics = fisher_volume_loss(
+            features,
+            quality,
+            trajectory_log_prob,
+            eps=self.dpp_reward_eps,
+        )
+        if self.dpp_match_nds_gradient_scale:
+            gradient_scale = (
+                self.dpp_reward_ema
+                * self.dpp_subset_size
+                / self.rollout_size
+            ).detach()
+            loss = loss * gradient_scale
+        else:
+            gradient_scale = loss.new_ones(())
+        diagnostics["gradient_scale"] = gradient_scale
+        return loss, diagnostics
+
     def _search_one_batch(self, batch_size: int) -> None:
         """Perform auxiliary search pass for warm-up (no gradients)."""
         recreate_n = self.env_params["recreate_n"]
@@ -404,14 +539,11 @@ class Trainer:
     def _update_metrics(
         self,
         metrics: Dict[str, AverageMeter],
-        batch_metrics: Tuple[float, float, float, int],
+        batch_metrics: Dict[str, float],
     ) -> None:
         """Update average meters with batch metrics."""
-        score, loss, reward, nb_improved = batch_metrics
-        metrics["score"].update(score, self.batch_size)
-        metrics["loss"].update(loss, self.batch_size)
-        metrics["reward"].update(reward, self.batch_size)
-        metrics["improved_frac"].update(nb_improved / self.batch_size, self.batch_size)
+        for name, value in batch_metrics.items():
+            metrics[name].update(value, self.batch_size)
 
     def _log_batch_progress(
         self,
@@ -425,7 +557,11 @@ class Trainer:
         self.logger.info(
             f"Epoch {epoch:3d}  |  Train {processed:4d}/{total:4d} ({100.0 * processed / total:5.1f}%)  |  "
             f'Reward: {metrics["score"].avg:6.4f}  |  Loss: {metrics["loss"].avg:6.4f}  |  '
-            f'Improved: {metrics["improved_frac"].avg:5.3f}  |  Cost: {np.mean(final_costs):7.2f}'
+            f'Improved: {metrics["improved_frac"].avg:5.3f}  |  '
+            f'Positive: {metrics["positive_rollout_frac"].avg:5.3f}  |  '
+            f'DPP: {metrics["dpp_logdet"].avg:6.3f}  |  '
+            f'Sim: {metrics["dpp_similarity"].avg:5.3f}  |  '
+            f'Cost: {np.mean(final_costs):7.2f}'
         )
 
     def _log_epoch_summary(
@@ -440,7 +576,11 @@ class Trainer:
         self.logger.info(
             f"Epoch {epoch:3d}  |  "
             f'Reward: {metrics["score"].avg:6.4f}  |  Loss: {metrics["loss"].avg:6.4f}  |  '
-            f'Improved: {metrics["improved_frac"].avg:5.3f}  |  Cost: {np.mean(final_costs):7.2f}'
+            f'Improved: {metrics["improved_frac"].avg:5.3f}  |  '
+            f'Positive: {metrics["positive_rollout_frac"].avg:5.3f}  |  '
+            f'DPP: {metrics["dpp_logdet"].avg:6.3f}  |  '
+            f'Sim: {metrics["dpp_similarity"].avg:5.3f}  |  '
+            f'Cost: {np.mean(final_costs):7.2f}'
         )
 
     def _log_to_wandb(
@@ -458,6 +598,15 @@ class Trainer:
                 "train/loss": metrics["loss"].avg,
                 "train/mean_reward": metrics["reward"].avg,
                 "train/improvement": metrics["improved_frac"].avg,
+                "train/positive_rollout_frac": metrics[
+                    "positive_rollout_frac"
+                ].avg,
+                "train/dpp_logdet": metrics["dpp_logdet"].avg,
+                "train/dpp_marginal": metrics["dpp_marginal"].avg,
+                "train/dpp_similarity": metrics["dpp_similarity"].avg,
+                "train/dpp_gradient_scale": metrics[
+                    "dpp_gradient_scale"
+                ].avg,
                 "train/final_costs": np.mean(final_costs),
                 "time/epoch": duration,
             },
@@ -501,4 +650,9 @@ class Trainer:
             "model_params": self.model_params,
             "env_params": self.env_params,
             "wandb_run_id": self.wandb_run_id,
+            "dpp_reward_ema": (
+                None
+                if self.dpp_reward_ema is None
+                else self.dpp_reward_ema.detach().cpu()
+            ),
         }

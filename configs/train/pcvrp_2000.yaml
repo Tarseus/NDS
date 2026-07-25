@@ -56,6 +56,14 @@ trainer_params:
   train_batch_size: 64
   grad_acc_iterations: "${env_params.iterations_per_instance}"
   rollout_size: 128
+  dpp_objective:
+    enabled: true
+    subset_size: 16
+    reward_ema_decay: 0.99
+    reward_eps: 1.0e-8
+    reward_clip: 10.0
+    feature_eps: 1.0e-12
+    match_nds_gradient_scale: true
   nb_skipped_iterations: 10
   prev_model_path: None
   model_save_interval: 50
@@ -71,7 +79,7 @@ trainer_params:
   valid_aug_factor: 8
   valid_data_load:
     enable: True
-    filename: 'ata/pcvrp/pcvrp2000_valid_seed1233_2_2_2_3_0.1_0.2_0.5.pt'
+    filename: 'data/pcvrp/pcvrp2000_valid_seed1233_2_2_2_3_0.1_0.2_0.5.pt'
 
 logger_params:
   desc: 'train_pcvrp_2000'
