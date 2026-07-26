@@ -1,0 +1,9 @@
+task=baseline_cvrp_2000_r2
+run_dir=/data1/gushengda/NDS_runs_baseline_feasibility_20260726/baseline_cvrp_2000_r2
+config=cvrp_2000.yaml
+gpu=3
+repo=/data1/gushengda/NDS_fisher_dpp
+expected_commit=6368516be2b7c1061fa68583c9876ef0217064ac
+waiting_for=/data1/gushengda/NDS_runs_baseline_feasibility_20260726/baseline_cvrp_1000/checkpoint-1500.pt
+started_at=2026-07-26T04:06:05+00:00
+wait_status=2026-07-26T04:06:05+00:00 checkpoint_missing=/data1/gushengda/NDS_runs_baseline_feasibility_20260726/baseline_cvrp_1000/checkpoint-1500.pt
