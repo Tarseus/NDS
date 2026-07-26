@@ -229,7 +229,8 @@ def _probe_rollout(self, z_probe: torch.Tensor) -> np.ndarray:
     )
     selected_list = []
 
-    self.model.decoder.set_kv(self.model.encoded_nodes, z_probe)
+    with torch.amp.autocast(device_type=self.device.type):
+        self.model.decoder.set_kv(self.model.encoded_nodes, z_probe)
     for _ in range(self.env.num_nodes_to_remove):
         with torch.amp.autocast(device_type=self.device.type):
             selected, _, _ = self.model(state)
