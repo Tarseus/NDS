@@ -1,0 +1,114 @@
+[2026-07-26 04:01:39] train_baseline_feasibility.py(29) : Starting reward-only baseline with passive compression and non-committing repeated-tournament diagnostics
+[2026-07-26 04:01:39] train_baseline_feasibility.py(33) : Resolved configuration:
+env_params:
+  problem: pcvrp
+  problem_size: 500
+  num_nodes_to_remove: 15
+  iterations_per_instance: 100
+  recreate_n: 5
+  beta: 0
+  insert_in_new_tours_only: true
+  num_processes: 8
+  generator_params:
+    use_X_generator: true
+    rootPos: 2
+    custPos: 2
+    demandType: 2
+    avgRouteSize: 3
+    prizes_min: 0.1
+    prizes_max: 0.2
+    prizes_alpha: 0.5
+  starting_solution_params:
+    nb_iterations: 100
+    nb_nodes_ratio: 0.25
+model_params:
+  problem: ${env_params.problem}
+  embedding_dim: 128
+  poly_embedding_dim: 256
+  sqrt_embedding_dim: 11.3137
+  encoder_layer_num: 2
+  tour_layer: true
+  message_passing_layer_num: 1
+  encoder_layer_num_2: 2
+  qkv_dim: 16
+  head_num: 8
+  logit_clipping: 10
+  ff_hidden_dim: 512
+  eval_type: softmax
+  z_dim: 10
+optimizer_params:
+  optimizer:
+    lr: 0.0001
+    weight_decay: 1.0e-06
+  scheduler:
+    milestones:
+    - 8001
+    - 8051
+    gamma: 0.1
+trainer_params:
+  use_cuda: true
+  cuda_device_num: 0
+  reward_type: i
+  epochs: 2000
+  iterations_per_epoch: 150000
+  train_batch_size: 64
+  grad_acc_iterations: ${env_params.iterations_per_instance}
+  rollout_size: 128
+  dpp_objective:
+    enabled: false
+    subset_size: 16
+    reward_ema_decay: 0.99
+    reward_eps: 1.0e-08
+    reward_clip: 10.0
+    feature_eps: 1.0e-12
+    match_nds_gradient_scale: true
+  nb_skipped_iterations: 10
+  prev_model_path: None
+  model_save_interval: 10
+  model_load:
+    enable: false
+    path: null
+    epoch: null
+  valid_episodes: 1000
+  valid_iterations: 50
+  valid_batch_size: 50
+  valid_rollout_size: 100
+  valid_augmentation_enable: true
+  valid_aug_factor: 8
+  valid_data_load:
+    enable: true
+    filename: data/pcvrp/pcvrp500_valid_seed1233_2_2_2_3_0.1_0.2_0.5.pt
+  feasibility_diagnostics:
+    enabled: true
+    probe_enabled: true
+    subset_sizes:
+    - 8
+    - 16
+    - 32
+    - 64
+    panel_size: 64
+    probe_interval: 97
+    probe_seed: 20260726
+logger_params:
+  desc: train_pcvrp_500
+  wandb:
+    enable: true
+    project: NDS
+  filepath: /data1/gushengda/NDS_runs_baseline_feasibility_20260726/baseline_pcvrp_500
+  filename: log.txt
+
+[2026-07-26 04:01:41] trainer.py(190) : ================================================================================
+[2026-07-26 04:02:05] trainer.py(557) : Epoch   1  |  Train 6400/150000 (  4.3%)  |  Reward: 0.0178  |  Loss: 0.0124  |  Improved: 0.999  |  Positive: 0.153  |  DPP:  0.000  |  Sim: 0.000  |  Cost:   49.21
+[2026-07-26 04:02:27] trainer.py(557) : Epoch   1  |  Train 12800/150000 (  8.5%)  |  Reward: 0.0166  |  Loss: 0.0116  |  Improved: 0.998  |  Positive: 0.149  |  DPP:  0.000  |  Sim: 0.000  |  Cost:   47.69
+[2026-07-26 04:02:50] trainer.py(557) : Epoch   1  |  Train 19200/150000 ( 12.8%)  |  Reward: 0.0163  |  Loss: 0.0114  |  Improved: 0.997  |  Positive: 0.145  |  DPP:  0.000  |  Sim: 0.000  |  Cost:   46.91
+[2026-07-26 04:03:12] trainer.py(557) : Epoch   1  |  Train 25600/150000 ( 17.1%)  |  Reward: 0.0159  |  Loss: 0.0110  |  Improved: 0.997  |  Positive: 0.144  |  DPP:  0.000  |  Sim: 0.000  |  Cost:   46.08
+[2026-07-26 04:03:34] trainer.py(557) : Epoch   1  |  Train 32000/150000 ( 21.3%)  |  Reward: 0.0160  |  Loss: 0.0111  |  Improved: 0.998  |  Positive: 0.143  |  DPP:  0.000  |  Sim: 0.000  |  Cost:   46.52
+[2026-07-26 04:03:56] trainer.py(557) : Epoch   1  |  Train 38400/150000 ( 25.6%)  |  Reward: 0.0163  |  Loss: 0.0113  |  Improved: 0.998  |  Positive: 0.144  |  DPP:  0.000  |  Sim: 0.000  |  Cost:   46.75
+[2026-07-26 04:04:19] trainer.py(557) : Epoch   1  |  Train 44800/150000 ( 29.9%)  |  Reward: 0.0161  |  Loss: 0.0112  |  Improved: 0.998  |  Positive: 0.144  |  DPP:  0.000  |  Sim: 0.000  |  Cost:   46.51
+[2026-07-26 04:04:42] trainer.py(557) : Epoch   1  |  Train 51200/150000 ( 34.1%)  |  Reward: 0.0160  |  Loss: 0.0111  |  Improved: 0.997  |  Positive: 0.146  |  DPP:  0.000  |  Sim: 0.000  |  Cost:   46.61
+[2026-07-26 04:05:04] trainer.py(557) : Epoch   1  |  Train 57600/150000 ( 38.4%)  |  Reward: 0.0160  |  Loss: 0.0111  |  Improved: 0.997  |  Positive: 0.148  |  DPP:  0.000  |  Sim: 0.000  |  Cost:   46.54
+[2026-07-26 04:05:26] trainer.py(557) : Epoch   1  |  Train 64000/150000 ( 42.7%)  |  Reward: 0.0160  |  Loss: 0.0111  |  Improved: 0.997  |  Positive: 0.149  |  DPP:  0.000  |  Sim: 0.000  |  Cost:   46.44
+[2026-07-26 04:10:38] trainer.py(576) : Epoch   1  |  Reward: 0.0158  |  Loss: 0.0108  |  Improved: 0.997  |  Positive: 0.153  |  DPP:  0.000  |  Sim: 0.000  |  Cost:   46.18
+[2026-07-26 04:10:38] baseline_feasibility.py(463) : Feasibility | Ret@64: 0.6960 | Margin: 0.4073 | BWS@64: -0.0013 | UsefulRepeat: 0.0130 | K_eff: 48.13 | Enc/DecProbe/RepairProbe ms: 8.9/24.2/68.8
+[2026-07-26 04:10:38] trainer.py(618) : Epoch   1/2000  |  Elapsed: 8.95m  |  Remain: 298.20h
+[2026-07-26 04:10:38] trainer.py(190) : ================================================================================
