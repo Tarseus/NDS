@@ -1,0 +1,8 @@
+task=baseline_smoke_pcvrp100
+run_dir=/data1/gushengda/NDS_runs_baseline_feasibility/bfws-baseline-smoke-20260726-g52
+config=pcvrp_100.yaml
+gpu=0
+repo=/data1/gushengda/NDS_fisher_dpp
+commit=d3a0b3ea2b7148b4d5b55830f152716302e2d92e
+started_at=2026-07-26T03:51:44+00:00
+/data1/gushengda/NDS_fisher_dpp/.venv/bin/python: can't open file '/data1/gushengda/NDS_runs_baseline_feasibility/bfws-baseline-smoke-20260726-g52/train_baseline_feasibility.py': [Errno 2] No such file or directory
