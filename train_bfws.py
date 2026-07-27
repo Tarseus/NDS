@@ -9,6 +9,7 @@ import hydra
 from omegaconf import DictConfig, OmegaConf
 
 from src import Trainer, create_logger
+from src.reproducibility import seed_everything
 
 
 def main(cfg: DictConfig) -> None:
@@ -18,6 +19,7 @@ def main(cfg: DictConfig) -> None:
     if bool(cfg.trainer_params.get("dpp_objective", {}).get("enabled", False)):
         raise ValueError("BFWS cannot be combined with the legacy DPP objective")
 
+    seed_everything(int(cfg.trainer_params.get("seed", 0)))
     create_logger(cfg.logger_params)
     logger.info("Starting fixed-code PortfolioStep training with BFWS")
     logger.info("Resolved configuration:\n%s", OmegaConf.to_yaml(cfg))
@@ -44,4 +46,3 @@ if __name__ == "__main__":
     with hydra.initialize(config_path=str(config_file.parent), version_base=None):
         config = hydra.compose(config_name=config_file.name, overrides=args.overrides)
     main(config)
-

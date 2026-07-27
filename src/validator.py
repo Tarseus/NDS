@@ -16,6 +16,7 @@ from .logging_utils import (
 )
 from .seed_sampler import SeedVectorSampler
 from .bfws import bfws_value, random_derangement
+from .reproducibility import seed_everything
 
 
 class Validator:
@@ -48,6 +49,7 @@ class Validator:
         bfws_params = self.trainer_params.get("bfws", {})
         self.bfws_enabled = bool(bfws_params.get("enabled", False))
         self.bfws_num_codes = int(bfws_params.get("num_codes", 8))
+        self.valid_seed = self.trainer_params.get("valid_seed")
         if self.bfws_enabled:
             if fixed_code_indices is None:
                 fixed_code_indices = self.seed_sampler.fixed_indices(
@@ -63,6 +65,8 @@ class Validator:
 
     def run(self, model, frozen_model, training_epoch: int) -> float:
         """Run full validation and return augmented score."""
+        if self.valid_seed is not None:
+            seed_everything(int(self.valid_seed))
         self.time_estimator.reset()
 
         # Initialize metrics
