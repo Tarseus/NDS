@@ -64,6 +64,10 @@ PYBIND11_MODULE(NDSOps, m) {
         .def("getTourList", &Solution::getTourList, "Get list of tours in the solution");
 
     // Function bindings
+    m.def("set_random_seed", &setRandomSeed,
+          "Reset the process-local RNG used by CVRP operations",
+          py::arg("seed"));
+
     m.def("create_starting_solution", &create_starting_solution, 
           "Create a starting solution for the given instance",
           py::arg("instance"), py::arg("nbImprovement"), py::arg("nbDestroy"),

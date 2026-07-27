@@ -36,7 +36,12 @@ class SeedVectorSampler:
         binary_vectors = [list(i) for i in itertools.product([0, 1], repeat=self.z_dim)]
         return torch.tensor(binary_vectors, device=self.device, dtype=torch.float32)
 
-    def sample(self, batch_size: int, rollout_size: int) -> torch.Tensor:
+    def sample(
+        self,
+        batch_size: int,
+        rollout_size: int,
+        generator: Optional[torch.Generator] = None,
+    ) -> torch.Tensor:
         """
         Sample seed vectors uniformly from the binary pool.
 
@@ -54,7 +59,12 @@ class SeedVectorSampler:
         )
 
         # Sample rollout_size vectors for each batch element (without replacement)
-        z_indices = torch.multinomial(uniform_dist, rollout_size, replacement=False)
+        z_indices = torch.multinomial(
+            uniform_dist,
+            rollout_size,
+            replacement=False,
+            generator=generator,
+        )
 
         # Index into binary pool and reshape
         z = self.binary_pool[z_indices]  # (batch_size, rollout_size, z_dim)

@@ -6,44 +6,51 @@
 
 #include "Utils.h"
 
+namespace {
+std::mt19937 randomGenerator(std::random_device{}());
+std::vector<float> fastRandomValues;
+size_t fastRandomIndex = 0;
+const size_t fastRandomPoolSize = 10000;
+}
+
+std::mt19937& getRandomGenerator() {
+    return randomGenerator;
+}
+
+void setRandomSeed(unsigned int seed) {
+    randomGenerator.seed(seed);
+    fastRandomValues.clear();
+    fastRandomIndex = 0;
+}
+
 // Generate a random integer in the range [min, max] (inclusive)
 int getRandomNumber(int min, int max) {
-    static std::random_device rd;
-    static std::mt19937 gen(rd());
     std::uniform_int_distribution<int> dist(min, max);
-    return dist(gen);
+    return dist(randomGenerator);
 }
 
 // Generate a random float in the range [min, max]
 float getRandomFraction(float min, float max) {
-    static std::random_device rd;
-    static std::mt19937 gen(rd());
     std::uniform_real_distribution<float> dist(min, max);
-    return dist(gen);
+    return dist(randomGenerator);
 }
 
 // Generate a random float between 0.0 and 1.0 using pre-generated values for speed
 float getRandomFractionFast() {
-    static std::vector<float> randomValues;
-    static size_t index = 0;
-    static const size_t poolSize = 10000;
-
     // Initialize the random value pool if empty
-    if (randomValues.empty()) {
-        std::random_device rd;
-        std::mt19937 gen(rd());
+    if (fastRandomValues.empty()) {
         std::uniform_real_distribution<float> dist(0.0f, 1.0f);
 
         // Pre-generate random values
-        randomValues.reserve(poolSize);
-        for (size_t i = 0; i < poolSize; ++i) {
-            randomValues.push_back(dist(gen));
+        fastRandomValues.reserve(fastRandomPoolSize);
+        for (size_t i = 0; i < fastRandomPoolSize; ++i) {
+            fastRandomValues.push_back(dist(randomGenerator));
         }
     }
 
     // Get the next random value from the pool
-    float randomValue = randomValues[index];
-    index = (index + 1) % poolSize; // Wrap around when reaching the end
+    float randomValue = fastRandomValues[fastRandomIndex];
+    fastRandomIndex = (fastRandomIndex + 1) % fastRandomPoolSize;
 
     return randomValue;
 }

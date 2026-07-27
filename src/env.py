@@ -74,6 +74,7 @@ class Env:
             env_params["problem"],
             num_processes,
             starting_solution_params=starting_solution_params,
+            random_seed=env_params.get("random_seed"),
         )
 
         # Problem data and features

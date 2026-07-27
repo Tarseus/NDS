@@ -13,6 +13,10 @@
 #include <algorithm>
 #include <numeric>
 
+// Access and reset the process-local RNG used by all CVRP operations.
+std::mt19937& getRandomGenerator();
+void setRandomSeed(unsigned int seed);
+
 // Generate a random integer in the range [min, max] (inclusive)
 int getRandomNumber(int min, int max);
 

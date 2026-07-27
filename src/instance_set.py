@@ -127,6 +127,7 @@ def worker(
     input_queue: multiprocessing.Queue,
     result_queue: multiprocessing.Queue,
     starting_solution_params: dict,
+    random_seed: Optional[int],
 ) -> None:
     """
     Worker process for parallel instance processing.
@@ -142,6 +143,8 @@ def worker(
         starting_solution_params: Parameters for starting solution generation
     """
     NDSOps = _load_cpp_operations(problem)
+    if random_seed is not None and hasattr(NDSOps, "set_random_seed"):
+        NDSOps.set_random_seed(int(random_seed))
 
     instances = []  # Do not delete. Storing the instances keeps the c++ objects alive.
     solutions = []
@@ -434,6 +437,7 @@ class InstanceSet:
         problem: str,
         num_processes: int,
         starting_solution_params: Optional[dict] = None,
+        random_seed: Optional[int] = None,
     ):
         """
         Initialize instance set manager.
@@ -451,6 +455,7 @@ class InstanceSet:
 
         # Starting solution parameters with defaults
         self.starting_solution_params = starting_solution_params or {}
+        self.random_seed = None if random_seed is None else int(random_seed)
 
         # Single-process mode state
         self._instances = []
@@ -465,10 +470,14 @@ class InstanceSet:
             self._init_worker_processes()
         else:
             self.NDSOps = _load_cpp_operations(problem)
+            if self.random_seed is not None and hasattr(
+                self.NDSOps, "set_random_seed"
+            ):
+                self.NDSOps.set_random_seed(self.random_seed)
 
     def _init_worker_processes(self) -> None:
         """Initialize worker processes for parallel execution."""
-        for _ in range(self.num_processes):
+        for worker_index in range(self.num_processes):
             input_queue = multiprocessing.Queue()
             output_queue = multiprocessing.Queue()
             p = multiprocessing.Process(
@@ -478,6 +487,11 @@ class InstanceSet:
                     input_queue,
                     output_queue,
                     self.starting_solution_params,
+                    (
+                        None
+                        if self.random_seed is None
+                        else self.random_seed + worker_index
+                    ),
                 ),
             )
             p.start()

@@ -11,20 +11,17 @@
 // Sort customers by various criteria (random, demand, distance from depot) as described in the SISRs paper
 // This function is only used by the handcrafted baseline heuristic
 void sort_abs_cust(std::vector<int>& A, const Instance& instance, char order) {
-    static std::random_device rd;
-    static std::mt19937 gen(rd());
-
     // If no order specified, randomly choose one
     if (order == '\0') {
         static std::vector<char> options = { 'R', 'D', 'F', 'C' };
         static std::discrete_distribution<> dist({ 4, 4, 2, 1 });
-        order = options[dist(gen)];
+        order = options[dist(getRandomGenerator())];
     }
 
     // Apply sorting based on the specified order
     if (order == 'R') {
         // Random shuffle
-        std::shuffle(A.begin(), A.end(), gen);
+        std::shuffle(A.begin(), A.end(), getRandomGenerator());
     }
     else if (order == 'D') {
         // Sort by demand (descending)
@@ -212,9 +209,6 @@ std::tuple<Solution, std::vector<float>> remove_recreate_singleImp_priority(
 
 // Create a starting solution using random improvements
 Solution create_starting_solution(const Instance& instance, int nbImprovement, int nbDestroy) {
-    static std::random_device rd;
-    static std::mt19937 gen(rd());
-
     // Start with a basic solution (one tour per customer)
     Solution sol = Solution(instance);
     std::vector<float> costs;
@@ -226,7 +220,7 @@ Solution create_starting_solution(const Instance& instance, int nbImprovement, i
     // Apply random improvements
     for (int i = 0; i < nbImprovement; ++i) {
         // Randomly shuffle all nodes
-        std::shuffle(allNodes.begin(), allNodes.end(), gen);
+        std::shuffle(allNodes.begin(), allNodes.end(), getRandomGenerator());
 
         // Select first nbDestroy nodes for removal
         std::vector<int> nodesToRemove(allNodes.begin(), allNodes.begin() + nbDestroy);

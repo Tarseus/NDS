@@ -52,7 +52,23 @@ class Validator:
         self.bfws_resample_codes_each_step = bool(
             bfws_params.get("resample_codes_each_step", False)
         )
+        panel_params = self.trainer_params.get("code_panel_eval", {})
+        self.code_panel_mode = str(panel_params.get("mode", "resample")).lower()
+        if self.code_panel_mode not in {"resample", "fixed"}:
+            raise ValueError("code_panel_eval.mode must be 'resample' or 'fixed'")
+        if self.bfws_enabled and self.code_panel_mode != "resample":
+            raise ValueError("code_panel_eval is only supported for baseline validation")
+        self.code_panel_indices = None
+        if not self.bfws_enabled and self.code_panel_mode == "fixed":
+            self.code_panel_indices = self.seed_sampler.fixed_indices(
+                int(self.trainer_params["valid_rollout_size"]),
+                int(panel_params.get("code_seed", 20260726)),
+            )
         self.valid_seed = self.trainer_params.get("valid_seed")
+        self.code_generator = torch.Generator(device=self.device)
+        self.code_generator.manual_seed(
+            int(panel_params.get("sampling_seed", self.valid_seed or 0))
+        )
         if self.bfws_enabled:
             if fixed_code_indices is None:
                 fixed_code_indices = self.seed_sampler.fixed_indices(
@@ -71,6 +87,21 @@ class Validator:
         if self.valid_seed is not None:
             seed_everything(int(self.valid_seed))
         self.time_estimator.reset()
+        if self.code_panel_indices is not None:
+            self.logger.info(
+                "Code panel: fixed seed=%d indices=%s",
+                int(
+                    self.trainer_params.get("code_panel_eval", {}).get(
+                        "code_seed", 20260726
+                    )
+                ),
+                self.code_panel_indices.cpu().tolist(),
+            )
+        elif not self.bfws_enabled:
+            self.logger.info(
+                "Code panel: resample independently per "
+                "instance/augmentation/step"
+            )
 
         # Initialize metrics
         metrics = {
@@ -103,9 +134,12 @@ class Validator:
         self._log_validation_results(metrics)
 
         # Additional greedy evaluation
-        greedy_diversity = self._evaluate_greedy_diversity(
-            model, frozen_model, aug_factor
-        )
+        if self.trainer_params.get("valid_greedy_diversity_enable", True):
+            greedy_diversity = self._evaluate_greedy_diversity(
+                model, frozen_model, aug_factor
+            )
+        else:
+            greedy_diversity = (float("nan"), float("nan"))
 
         # Log to W&B if enabled
         if self.use_wandb:
@@ -238,7 +272,16 @@ class Validator:
                             replicas=2,
                         )
                 else:
-                    z = self.seed_sampler.sample(aug_batch_size, rollout_size)
+                    if self.code_panel_indices is not None:
+                        z = self.seed_sampler.repeat_fixed(
+                            self.code_panel_indices, aug_batch_size
+                        )
+                    else:
+                        z = self.seed_sampler.sample(
+                            aug_batch_size,
+                            rollout_size,
+                            generator=self.code_generator,
+                        )
 
                 # Forward pass
                 with torch.amp.autocast(device_type=self.device.type):
