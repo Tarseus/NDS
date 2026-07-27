@@ -101,6 +101,23 @@ def test_fixed_code_panel_is_repeated_in_replica_order():
     assert torch.unique(indices).numel() == 3
 
 
+def test_seed_sampler_can_isolate_code_rng_from_global_torch_rng():
+    sampler_path = Path(__file__).parents[1] / "src" / "seed_sampler.py"
+    spec = importlib.util.spec_from_file_location("seed_sampler", sampler_path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    sampler = module.SeedVectorSampler(4, torch.device("cpu"))
+    generator = torch.Generator(device="cpu").manual_seed(17)
+
+    torch.manual_seed(29)
+    expected_global = torch.rand(3)
+    torch.manual_seed(29)
+    sampler.sample(2, 4, generator=generator)
+    actual_global = torch.rand(3)
+
+    torch.testing.assert_close(actual_global, expected_global, rtol=0, atol=0)
+
+
 def test_resampled_panel_is_shared_and_repeated_in_replica_order():
     sampler_path = Path(__file__).parents[1] / "src" / "seed_sampler.py"
     spec = importlib.util.spec_from_file_location("seed_sampler", sampler_path)

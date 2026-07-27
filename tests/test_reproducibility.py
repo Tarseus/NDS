@@ -1,4 +1,5 @@
 import random
+from pathlib import Path
 
 import numpy as np
 import torch
@@ -16,3 +17,13 @@ def test_seed_everything_replays_all_cpu_rngs():
     assert first[0] == second[0]
     assert first[1] == second[1]
     torch.testing.assert_close(first[2], second[2], rtol=0, atol=0)
+
+
+def test_cvrp_random_device_is_routed_through_seedable_generator():
+    cpp_dir = Path(__file__).parents[1] / "src" / "cpp" / "cvrp"
+    operations = (cpp_dir / "Operations.cpp").read_text()
+    utilities = (cpp_dir / "Utils.cpp").read_text()
+
+    assert "random_device" not in operations
+    assert "void setRandomSeed(unsigned int seed)" in utilities
+    assert "randomGenerator.seed(seed)" in utilities
