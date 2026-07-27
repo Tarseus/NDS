@@ -1,0 +1,194 @@
+[2026-07-27 05:48:29] train_bfws.py(24) : Starting fixed-code PortfolioStep training with BFWS
+[2026-07-27 05:48:29] train_bfws.py(25) : Resolved configuration:
+env_params:
+  problem: cvrp
+  problem_size: 100
+  num_nodes_to_remove: 15
+  iterations_per_instance: 1
+  recreate_n: 5
+  beta: 0
+  insert_in_new_tours_only: true
+  num_processes: 8
+  generator_params:
+    use_X_generator: false
+    rootPos: 2
+    custPos: 2
+    demandType: 2
+    avgRouteSize: 3
+  starting_solution_params:
+    nb_iterations: 50
+    nb_nodes_ratio: 0.15
+model_params:
+  problem: ${env_params.problem}
+  embedding_dim: 128
+  poly_embedding_dim: 256
+  sqrt_embedding_dim: 11.3137
+  encoder_layer_num: 2
+  tour_layer: true
+  message_passing_layer_num: 1
+  encoder_layer_num_2: 2
+  qkv_dim: 16
+  head_num: 8
+  logit_clipping: 10
+  ff_hidden_dim: 512
+  eval_type: softmax
+  z_dim: 10
+optimizer_params:
+  optimizer:
+    lr: 0.0
+    weight_decay: 1.0e-06
+  scheduler:
+    milestones:
+    - 8001
+    - 8051
+    gamma: 0.1
+trainer_params:
+  seed: 1003
+  valid_seed: 91003
+  use_cuda: true
+  cuda_device_num: 0
+  reward_type: i
+  epochs: 25
+  iterations_per_epoch: 64
+  train_batch_size: 64
+  grad_acc_iterations: 1
+  rollout_size: 8
+  dpp_objective:
+    enabled: false
+  bfws:
+    enabled: true
+    num_codes: 8
+    code_seed: 20260726
+    resample_codes_each_step: true
+    constraint_enabled: false
+    target: 0.0
+    dual_init: 0.0
+    dual_lr: 0.01
+    dual_ema_decay: 0.99
+    dual_max: 10.0
+  nb_skipped_iterations: 0
+  prev_model_path: null
+  model_save_interval: 25
+  model_load:
+    enable: true
+    path: /data1/gushengda/NDS_bfws_full/models/cvrp_100
+    epoch: 2000
+    load_optimizer: false
+  valid_episodes: 100
+  valid_iterations: 20
+  valid_batch_size: 20
+  valid_rollout_size: 8
+  valid_augmentation_enable: false
+  valid_aug_factor: 1
+  valid_data_load:
+    enable: true
+    filename: data/cvrp/vrp100_valid_seed1233.pkl
+logger_params:
+  desc: train_cvrp_100_fixed_code
+  wandb:
+    enable: false
+    project: NDS
+  filepath: /data1/gushengda/NDS_runs_bfws/bfws_cvrp100_frozen_portfolio_resample8_5seed_20260727-134714/seed1003_portfolio_resample8
+  filename: log.txt
+
+[2026-07-27 05:48:31] trainer.py(188) : Loaded model from /data1/gushengda/NDS_bfws_full/models/cvrp_100/checkpoint-2000.pt
+[2026-07-27 05:48:31] trainer.py(267) : ================================================================================
+[2026-07-27 05:48:33] trainer.py(826) : Epoch   1  |  Train   64/  64 (100.0%)  |  Reward: 0.0417  |  Loss: 0.2548  |  Improved: 1.000  |  Positive: 0.874  |  DPP:  0.000  |  Sim: 0.000  |  BFWS: -0.089  |  Keff:  6.37  |  Cost:   17.69
+[2026-07-27 05:48:33] trainer.py(847) : Epoch   1  |  Reward: 0.0417  |  Loss: 0.2548  |  Improved: 1.000  |  Positive: 0.874  |  DPP:  0.000  |  Sim: 0.000  |  BFWS: -0.089  |  Keff:  6.37  |  Dual: 0.000  |  Cost:   17.69
+[2026-07-27 05:48:33] trainer.py(919) : Epoch   1/ 25  |  Elapsed: 0.03m  |  Remain: 0.74m
+[2026-07-27 05:48:33] trainer.py(267) : ================================================================================
+[2026-07-27 05:48:33] trainer.py(847) : Epoch   2  |  Reward: 0.0374  |  Loss: 0.2172  |  Improved: 1.000  |  Positive: 0.849  |  DPP:  0.000  |  Sim: 0.000  |  BFWS: -0.054  |  Keff:  7.20  |  Dual: 0.000  |  Cost:   17.87
+[2026-07-27 05:48:33] trainer.py(919) : Epoch   2/ 25  |  Elapsed: 0.03m  |  Remain: 0.38m
+[2026-07-27 05:48:33] trainer.py(267) : ================================================================================
+[2026-07-27 05:48:33] trainer.py(847) : Epoch   3  |  Reward: 0.0414  |  Loss: 0.2333  |  Improved: 1.000  |  Positive: 0.890  |  DPP:  0.000  |  Sim: 0.000  |  BFWS:  0.054  |  Keff:  6.28  |  Dual: 0.000  |  Cost:   18.32
+[2026-07-27 05:48:33] trainer.py(919) : Epoch   3/ 25  |  Elapsed: 0.04m  |  Remain: 0.26m
+[2026-07-27 05:48:33] trainer.py(267) : ================================================================================
+[2026-07-27 05:48:33] trainer.py(847) : Epoch   4  |  Reward: 0.0390  |  Loss: 0.2248  |  Improved: 1.000  |  Positive: 0.856  |  DPP:  0.000  |  Sim: 0.000  |  BFWS:  0.107  |  Keff:  6.32  |  Dual: 0.000  |  Cost:   18.06
+[2026-07-27 05:48:33] trainer.py(919) : Epoch   4/ 25  |  Elapsed: 0.04m  |  Remain: 0.20m
+[2026-07-27 05:48:33] trainer.py(267) : ================================================================================
+[2026-07-27 05:48:33] trainer.py(847) : Epoch   5  |  Reward: 0.0373  |  Loss: 0.2194  |  Improved: 1.000  |  Positive: 0.821  |  DPP:  0.000  |  Sim: 0.000  |  BFWS:  0.071  |  Keff:  6.98  |  Dual: 0.000  |  Cost:   17.61
+[2026-07-27 05:48:33] trainer.py(919) : Epoch   5/ 25  |  Elapsed: 0.04m  |  Remain: 0.17m
+[2026-07-27 05:48:33] trainer.py(267) : ================================================================================
+[2026-07-27 05:48:34] trainer.py(847) : Epoch   6  |  Reward: 0.0382  |  Loss: 0.2384  |  Improved: 1.000  |  Positive: 0.849  |  DPP:  0.000  |  Sim: 0.000  |  BFWS:  0.071  |  Keff:  6.23  |  Dual: 0.000  |  Cost:   17.92
+[2026-07-27 05:48:34] trainer.py(919) : Epoch   6/ 25  |  Elapsed: 0.05m  |  Remain: 0.14m
+[2026-07-27 05:48:34] trainer.py(267) : ================================================================================
+[2026-07-27 05:48:34] trainer.py(847) : Epoch   7  |  Reward: 0.0421  |  Loss: 0.2821  |  Improved: 1.000  |  Positive: 0.851  |  DPP:  0.000  |  Sim: 0.000  |  BFWS:  0.089  |  Keff:  6.69  |  Dual: 0.000  |  Cost:   17.31
+[2026-07-27 05:48:34] trainer.py(919) : Epoch   7/ 25  |  Elapsed: 0.05m  |  Remain: 0.13m
+[2026-07-27 05:48:34] trainer.py(267) : ================================================================================
+[2026-07-27 05:48:34] trainer.py(847) : Epoch   8  |  Reward: 0.0403  |  Loss: 0.2809  |  Improved: 1.000  |  Positive: 0.861  |  DPP:  0.000  |  Sim: 0.000  |  BFWS: -0.036  |  Keff:  6.05  |  Dual: 0.000  |  Cost:   17.93
+[2026-07-27 05:48:34] trainer.py(919) : Epoch   8/ 25  |  Elapsed: 0.05m  |  Remain: 0.11m
+[2026-07-27 05:48:34] trainer.py(267) : ================================================================================
+[2026-07-27 05:48:34] trainer.py(847) : Epoch   9  |  Reward: 0.0394  |  Loss: 0.1865  |  Improved: 1.000  |  Positive: 0.895  |  DPP:  0.000  |  Sim: 0.000  |  BFWS:  0.036  |  Keff:  6.54  |  Dual: 0.000  |  Cost:   17.79
+[2026-07-27 05:48:34] trainer.py(919) : Epoch   9/ 25  |  Elapsed: 0.06m  |  Remain: 0.10m
+[2026-07-27 05:48:34] trainer.py(267) : ================================================================================
+[2026-07-27 05:48:34] trainer.py(847) : Epoch  10  |  Reward: 0.0466  |  Loss: 0.2152  |  Improved: 1.000  |  Positive: 0.897  |  DPP:  0.000  |  Sim: 0.000  |  BFWS:  0.036  |  Keff:  7.28  |  Dual: 0.000  |  Cost:   17.79
+[2026-07-27 05:48:34] trainer.py(919) : Epoch  10/ 25  |  Elapsed: 0.06m  |  Remain: 0.09m
+[2026-07-27 05:48:34] trainer.py(267) : ================================================================================
+[2026-07-27 05:48:35] trainer.py(847) : Epoch  11  |  Reward: 0.0438  |  Loss: 0.2529  |  Improved: 1.000  |  Positive: 0.882  |  DPP:  0.000  |  Sim: 0.000  |  BFWS:  0.018  |  Keff:  5.99  |  Dual: 0.000  |  Cost:   18.02
+[2026-07-27 05:48:35] trainer.py(919) : Epoch  11/ 25  |  Elapsed: 0.06m  |  Remain: 0.08m
+[2026-07-27 05:48:35] trainer.py(267) : ================================================================================
+[2026-07-27 05:48:35] trainer.py(847) : Epoch  12  |  Reward: 0.0398  |  Loss: 0.1897  |  Improved: 1.000  |  Positive: 0.880  |  DPP:  0.000  |  Sim: 0.000  |  BFWS:  0.054  |  Keff:  6.55  |  Dual: 0.000  |  Cost:   18.19
+[2026-07-27 05:48:35] trainer.py(919) : Epoch  12/ 25  |  Elapsed: 0.07m  |  Remain: 0.07m
+[2026-07-27 05:48:35] trainer.py(267) : ================================================================================
+[2026-07-27 05:48:35] trainer.py(847) : Epoch  13  |  Reward: 0.0345  |  Loss: 0.2729  |  Improved: 1.000  |  Positive: 0.777  |  DPP:  0.000  |  Sim: 0.000  |  BFWS: -0.036  |  Keff:  5.99  |  Dual: 0.000  |  Cost:   17.86
+[2026-07-27 05:48:35] trainer.py(919) : Epoch  13/ 25  |  Elapsed: 0.07m  |  Remain: 0.06m
+[2026-07-27 05:48:35] trainer.py(267) : ================================================================================
+[2026-07-27 05:48:35] trainer.py(847) : Epoch  14  |  Reward: 0.0385  |  Loss: 0.2167  |  Improved: 1.000  |  Positive: 0.866  |  DPP:  0.000  |  Sim: 0.000  |  BFWS:  0.054  |  Keff:  6.18  |  Dual: 0.000  |  Cost:   18.23
+[2026-07-27 05:48:35] trainer.py(919) : Epoch  14/ 25  |  Elapsed: 0.07m  |  Remain: 0.06m
+[2026-07-27 05:48:35] trainer.py(267) : ================================================================================
+[2026-07-27 05:48:35] trainer.py(847) : Epoch  15  |  Reward: 0.0382  |  Loss: 0.2305  |  Improved: 1.000  |  Positive: 0.856  |  DPP:  0.000  |  Sim: 0.000  |  BFWS:  0.107  |  Keff:  6.13  |  Dual: 0.000  |  Cost:   18.02
+[2026-07-27 05:48:35] trainer.py(919) : Epoch  15/ 25  |  Elapsed: 0.07m  |  Remain: 0.05m
+[2026-07-27 05:48:35] trainer.py(267) : ================================================================================
+[2026-07-27 05:48:35] trainer.py(847) : Epoch  16  |  Reward: 0.0407  |  Loss: 0.2518  |  Improved: 1.000  |  Positive: 0.838  |  DPP:  0.000  |  Sim: 0.000  |  BFWS:  0.161  |  Keff:  5.71  |  Dual: 0.000  |  Cost:   17.67
+[2026-07-27 05:48:35] trainer.py(919) : Epoch  16/ 25  |  Elapsed: 0.08m  |  Remain: 0.04m
+[2026-07-27 05:48:36] trainer.py(267) : ================================================================================
+[2026-07-27 05:48:36] trainer.py(847) : Epoch  17  |  Reward: 0.0359  |  Loss: 0.2207  |  Improved: 1.000  |  Positive: 0.845  |  DPP:  0.000  |  Sim: 0.000  |  BFWS:  0.089  |  Keff:  6.76  |  Dual: 0.000  |  Cost:   18.16
+[2026-07-27 05:48:36] trainer.py(919) : Epoch  17/ 25  |  Elapsed: 0.08m  |  Remain: 0.04m
+[2026-07-27 05:48:36] trainer.py(267) : ================================================================================
+[2026-07-27 05:48:36] trainer.py(847) : Epoch  18  |  Reward: 0.0368  |  Loss: 0.2442  |  Improved: 1.000  |  Positive: 0.847  |  DPP:  0.000  |  Sim: 0.000  |  BFWS:  0.089  |  Keff:  7.18  |  Dual: 0.000  |  Cost:   18.47
+[2026-07-27 05:48:36] trainer.py(919) : Epoch  18/ 25  |  Elapsed: 0.08m  |  Remain: 0.03m
+[2026-07-27 05:48:36] trainer.py(267) : ================================================================================
+[2026-07-27 05:48:36] trainer.py(847) : Epoch  19  |  Reward: 0.0385  |  Loss: 0.2892  |  Improved: 1.000  |  Positive: 0.845  |  DPP:  0.000  |  Sim: 0.000  |  BFWS:  0.179  |  Keff:  6.06  |  Dual: 0.000  |  Cost:   17.76
+[2026-07-27 05:48:36] trainer.py(919) : Epoch  19/ 25  |  Elapsed: 0.09m  |  Remain: 0.03m
+[2026-07-27 05:48:36] trainer.py(267) : ================================================================================
+[2026-07-27 05:48:36] trainer.py(847) : Epoch  20  |  Reward: 0.0378  |  Loss: 0.2535  |  Improved: 1.000  |  Positive: 0.828  |  DPP:  0.000  |  Sim: 0.000  |  BFWS:  0.125  |  Keff:  7.29  |  Dual: 0.000  |  Cost:   18.19
+[2026-07-27 05:48:36] trainer.py(919) : Epoch  20/ 25  |  Elapsed: 0.09m  |  Remain: 0.02m
+[2026-07-27 05:48:36] trainer.py(267) : ================================================================================
+[2026-07-27 05:48:36] trainer.py(847) : Epoch  21  |  Reward: 0.0424  |  Loss: 0.2679  |  Improved: 1.000  |  Positive: 0.869  |  DPP:  0.000  |  Sim: 0.000  |  BFWS:  0.018  |  Keff:  6.15  |  Dual: 0.000  |  Cost:   17.69
+[2026-07-27 05:48:36] trainer.py(919) : Epoch  21/ 25  |  Elapsed: 0.09m  |  Remain: 0.02m
+[2026-07-27 05:48:36] trainer.py(267) : ================================================================================
+[2026-07-27 05:48:37] trainer.py(847) : Epoch  22  |  Reward: 0.0409  |  Loss: 0.3074  |  Improved: 1.000  |  Positive: 0.802  |  DPP:  0.000  |  Sim: 0.000  |  BFWS:  0.036  |  Keff:  5.82  |  Dual: 0.000  |  Cost:   17.97
+[2026-07-27 05:48:37] trainer.py(919) : Epoch  22/ 25  |  Elapsed: 0.10m  |  Remain: 0.01m
+[2026-07-27 05:48:37] trainer.py(267) : ================================================================================
+[2026-07-27 05:48:37] trainer.py(847) : Epoch  23  |  Reward: 0.0410  |  Loss: 0.2393  |  Improved: 1.000  |  Positive: 0.846  |  DPP:  0.000  |  Sim: 0.000  |  BFWS: -0.036  |  Keff:  6.47  |  Dual: 0.000  |  Cost:   17.89
+[2026-07-27 05:48:37] trainer.py(919) : Epoch  23/ 25  |  Elapsed: 0.10m  |  Remain: 0.01m
+[2026-07-27 05:48:37] trainer.py(267) : ================================================================================
+[2026-07-27 05:48:37] trainer.py(847) : Epoch  24  |  Reward: 0.0431  |  Loss: 0.2600  |  Improved: 1.000  |  Positive: 0.846  |  DPP:  0.000  |  Sim: 0.000  |  BFWS:  0.143  |  Keff:  6.38  |  Dual: 0.000  |  Cost:   17.88
+[2026-07-27 05:48:37] trainer.py(919) : Epoch  24/ 25  |  Elapsed: 0.10m  |  Remain: 0.00m
+[2026-07-27 05:48:37] trainer.py(267) : ================================================================================
+[2026-07-27 05:48:37] trainer.py(847) : Epoch  25  |  Reward: 0.0348  |  Loss: 0.2750  |  Improved: 1.000  |  Positive: 0.786  |  DPP:  0.000  |  Sim: 0.000  |  BFWS:  0.232  |  Keff:  6.17  |  Dual: 0.000  |  Cost:   18.13
+[2026-07-27 05:48:37] trainer.py(919) : Epoch  25/ 25  |  Elapsed: 0.10m  |  Remain: 0.00m
+[2026-07-27 05:48:37] trainer.py(930) : Saving checkpoint
+[2026-07-27 05:48:38] validator.py(97) : ================================================================================
+[2026-07-27 05:48:38] validator.py(98) : Validation
+[2026-07-27 05:48:38] validator.py(99) : ================================================================================
+[2026-07-27 05:48:39] validator.py(414) : Episode  20/100  |  Elapsed: 0.02m  |  Remain: 0.10m  |  Score:   16.00  |  Aug Score:   16.00
+[2026-07-27 05:48:39] validator.py(414) : Episode  40/100  |  Elapsed: 0.03m  |  Remain: 0.05m  |  Score:   15.73  |  Aug Score:   15.73
+[2026-07-27 05:48:40] validator.py(414) : Episode  60/100  |  Elapsed: 0.04m  |  Remain: 0.03m  |  Score:   16.17  |  Aug Score:   16.17
+[2026-07-27 05:48:40] validator.py(414) : Episode  80/100  |  Elapsed: 0.05m  |  Remain: 0.01m  |  Score:   16.07  |  Aug Score:   16.07
+[2026-07-27 05:48:41] validator.py(414) : Episode 100/100  |  Elapsed: 0.06m  |  Remain: 0.00m  |  Score:   16.36  |  Aug Score:   16.36
+[2026-07-27 05:48:41] validator.py(422) : ================================================================================
+[2026-07-27 05:48:41] validator.py(423) : Validation Complete
+[2026-07-27 05:48:41] validator.py(424) : ================================================================================
+[2026-07-27 05:48:41] validator.py(425) : No-Aug Score:     16.356
+[2026-07-27 05:48:41] validator.py(426) : Aug Score:        16.356
+[2026-07-27 05:48:41] validator.py(427) : Diversity Score:  0.2454
+[2026-07-27 05:48:41] validator.py(428) : Unique Rollouts:  1.0000
+[2026-07-27 05:48:41] validator.py(430) : Portfolio J_K:   0.00769
+[2026-07-27 05:48:41] validator.py(431) : BFWS:             0.0629
+[2026-07-27 05:48:41] validator.py(432) : Winner Agreement:  0.1700 same /  0.1150 mismatched
+[2026-07-27 05:48:41] validator.py(436) : Effective Codes:    6.665
+[2026-07-27 05:48:41] validator.py(439) : ================================================================================
+[2026-07-27 05:48:41] trainer.py(285) : ================================================================================
+[2026-07-27 05:48:41] trainer.py(286) : Training Complete
+[2026-07-27 05:48:41] trainer.py(287) : ================================================================================
