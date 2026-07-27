@@ -19,6 +19,7 @@ from .logging_utils import (
 )
 from .validator import Validator
 from .seed_sampler import SeedVectorSampler
+from .bfws import exact_functional_credits, random_derangement
 from .fisher_dpp import (
     fisher_volume_loss,
     gather_rollouts,
@@ -71,6 +72,37 @@ class Trainer:
         # Training parameters
         self.batch_size = self.trainer_params["train_batch_size"]
         self.rollout_size = self.trainer_params["rollout_size"]
+        bfws_params = self.trainer_params.get("bfws", {})
+        self.bfws_enabled = bool(bfws_params.get("enabled", False))
+        self.bfws_num_codes = int(bfws_params.get("num_codes", 8))
+        self.bfws_replicas = 2
+        self.bfws_code_seed = int(bfws_params.get("code_seed", 20260726))
+        self.bfws_constraint_enabled = bool(
+            bfws_params.get("constraint_enabled", True)
+        )
+        self.bfws_target = float(bfws_params.get("target", 0.0))
+        self.bfws_dual_lr = float(bfws_params.get("dual_lr", 1e-2))
+        self.bfws_dual_ema_decay = float(
+            bfws_params.get("dual_ema_decay", 0.99)
+        )
+        self.bfws_dual_max = float(bfws_params.get("dual_max", 10.0))
+        self.bfws_dual = torch.tensor(
+            float(bfws_params.get("dual_init", 0.0)), device=self.device
+        )
+        self.bfws_value_ema = None
+        if self.bfws_enabled:
+            if self.bfws_num_codes < 2:
+                raise ValueError("BFWS requires num_codes >= 2")
+            if self.batch_size < 2:
+                raise ValueError("BFWS requires train_batch_size >= 2")
+            if not 0.0 <= self.bfws_target <= 1.0:
+                raise ValueError("BFWS target must be in [0, 1]")
+            if self.bfws_dual_lr < 0 or self.bfws_dual_max < 0:
+                raise ValueError("BFWS dual parameters must be non-negative")
+            if not 0.0 <= self.bfws_dual_ema_decay < 1.0:
+                raise ValueError("BFWS dual_ema_decay must be in [0, 1)")
+            self.rollout_size = self.bfws_replicas * self.bfws_num_codes
+
         dpp_params = self.trainer_params.get("dpp_objective", {})
         self.dpp_enabled = bool(dpp_params.get("enabled", False))
         self.dpp_subset_size = int(dpp_params.get("subset_size", 16))
@@ -88,9 +120,16 @@ class Trainer:
             raise ValueError(
                 "dpp_objective.subset_size cannot exceed trainer rollout_size"
             )
+        if self.bfws_enabled and self.dpp_enabled:
+            raise ValueError("BFWS and the legacy Fisher-volume objective are exclusive")
 
         # Seed vector sampler
         self.seed_sampler = SeedVectorSampler(model_params["z_dim"], self.device)
+        self.bfws_code_indices = None
+        if self.bfws_enabled:
+            self.bfws_code_indices = self.seed_sampler.fixed_indices(
+                self.bfws_num_codes, self.bfws_code_seed
+            )
 
         # Restore from checkpoint if needed
         self.start_epoch = 1
@@ -104,6 +143,7 @@ class Trainer:
             self.trainer_params,
             self.model_params,
             logger_params,
+            fixed_code_indices=self.bfws_code_indices,
         )
 
         # Setup experiment tracking
@@ -136,10 +176,12 @@ class Trainer:
                 checkpoint_path, map_location=self.device, weights_only=False
             )
             self.model.load_state_dict(checkpoint["model_state_dict"])
-            self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+            if bool(model_load.get("load_optimizer", True)):
+                self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
             self.dpp_reward_ema = checkpoint.get("dpp_reward_ema")
             if self.dpp_reward_ema is not None:
                 self.dpp_reward_ema = self.dpp_reward_ema.to(self.device)
+            self._restore_bfws_state(checkpoint)
             self.logger.info(f"Loaded model from {checkpoint_path}")
 
         # Auto-resume from latest if exists
@@ -156,7 +198,39 @@ class Trainer:
             self.dpp_reward_ema = checkpoint.get("dpp_reward_ema")
             if self.dpp_reward_ema is not None:
                 self.dpp_reward_ema = self.dpp_reward_ema.to(self.device)
+            self._restore_bfws_state(checkpoint)
             self.logger.info(f"Resuming from epoch {self.start_epoch}")
+
+    def _restore_bfws_state(self, checkpoint: Dict[str, Any]) -> None:
+        """Restore BFWS-only state while accepting original NDS checkpoints."""
+        if not self.bfws_enabled:
+            return
+        state = checkpoint.get("bfws_state")
+        if not state:
+            return
+        indices = torch.as_tensor(
+            state["code_indices"], dtype=torch.long, device=self.device
+        )
+        if indices.numel() != self.bfws_num_codes:
+            raise ValueError(
+                "checkpoint BFWS code count does not match configured num_codes"
+            )
+        if torch.unique(indices).numel() != indices.numel():
+            raise ValueError("checkpoint BFWS codes must be distinct")
+        if torch.any(indices < 0) or torch.any(
+            indices >= self.seed_sampler.pool.size(0)
+        ):
+            raise ValueError("checkpoint BFWS code index is outside the seed pool")
+        self.bfws_code_indices = indices
+        self.bfws_dual = torch.as_tensor(
+            state.get("dual", 0.0), dtype=torch.float32, device=self.device
+        )
+        value_ema = state.get("value_ema")
+        self.bfws_value_ema = (
+            None
+            if value_ema is None
+            else torch.as_tensor(value_ema, dtype=torch.float32, device=self.device)
+        )
 
     def _init_wandb(
         self,
@@ -234,7 +308,21 @@ class Trainer:
             "dpp_marginal": AverageMeter(),
             "dpp_similarity": AverageMeter(),
             "dpp_gradient_scale": AverageMeter(),
+            "bfws": AverageMeter(),
+            "bfws_same": AverageMeter(),
+            "bfws_mismatched": AverageMeter(),
+            "bfws_effective_codes": AverageMeter(),
+            "bfws_joint_failure": AverageMeter(),
+            "bfws_winner_margin": AverageMeter(),
+            "bfws_reward_credit_l1": AverageMeter(),
+            "bfws_credit_l1": AverageMeter(),
+            "bfws_dual": AverageMeter(),
+            "bfws_target": AverageMeter(),
+            "portfolio_accepted_frac": AverageMeter(),
         }
+        if self.bfws_enabled:
+            for code in range(self.bfws_num_codes):
+                metrics[f"bfws_winner_frequency_{code}"] = AverageMeter()
         final_costs = []
         processed_iters = 0
         logged_batches = 0
@@ -291,6 +379,9 @@ class Trainer:
 
     def _train_one_batch(self, batch_size: int) -> Dict[str, float]:
         """Train on one batch and return scalar training diagnostics."""
+        if self.bfws_enabled:
+            return self._train_one_batch_bfws(batch_size)
+
         self.model.train()
 
         # Reset environment and get state
@@ -348,7 +439,136 @@ class Trainer:
             "dpp_marginal": dpp_diagnostics["marginal"].item(),
             "dpp_similarity": dpp_diagnostics["similarity"].item(),
             "dpp_gradient_scale": dpp_diagnostics["gradient_scale"].item(),
+            "bfws": 0.0,
+            "bfws_same": 0.0,
+            "bfws_mismatched": 0.0,
+            "bfws_effective_codes": 0.0,
+            "bfws_joint_failure": 0.0,
+            "bfws_winner_margin": 0.0,
+            "bfws_reward_credit_l1": 0.0,
+            "bfws_credit_l1": 0.0,
+            "bfws_dual": 0.0,
+            "bfws_target": 0.0,
+            "portfolio_accepted_frac": 0.0,
         }
+
+    def _train_one_batch_bfws(self, batch_size: int) -> Dict[str, float]:
+        """Train with two same-state fixed-code PortfolioStep tournaments."""
+        self.model.train()
+        self.env.set_rollout_size(self.bfws_replicas * self.bfws_num_codes)
+
+        # All auxiliary random variables are sampled before policy actions, so
+        # tie-breaking, mismatching and SA acceptance are action-independent.
+        tie_priorities = torch.rand(
+            batch_size,
+            self.bfws_replicas,
+            self.bfws_num_codes,
+            device=self.device,
+        )
+        acceptance_uniforms = torch.rand(batch_size, device=self.device)
+        derangement = random_derangement(batch_size, self.device)
+
+        state = self.env.reset()
+        reset_state = self.env.get_model_input(self.device)
+        codes = self.seed_sampler.repeat_fixed(
+            self.bfws_code_indices,
+            batch_size,
+            replicas=self.bfws_replicas,
+        )
+        with torch.amp.autocast(device_type=self.device.type):
+            self.model.pre_forward(reset_state, codes)
+        step_probs, _ = self._perform_rollout(state)
+        selected_nodes = self.env.selected_node_list.cpu().numpy()
+
+        old_costs = torch.as_tensor(
+            self.env.instanceSet.costs,
+            dtype=torch.float32,
+            device=self.device,
+        )
+        if torch.any(old_costs <= 0):
+            raise ValueError("BFWS relative rewards require positive incumbent costs")
+        portfolio = self.env.instanceSet.remove_recreate_portfolio(
+            selected_nodes,
+            self.bfws_num_codes,
+            self.env_params["recreate_n"],
+            T=0.0,
+            beta=self.env_params["beta"],
+            insert_in_new_tours_only=self.env_params[
+                "insert_in_new_tours_only"
+            ],
+            tie_priorities=tie_priorities.detach().cpu().numpy(),
+            acceptance_uniforms=acceptance_uniforms.detach().cpu().numpy(),
+            commit_replica=0,
+        )
+        candidate_costs = torch.as_tensor(
+            portfolio.candidate_costs,
+            dtype=torch.float32,
+            device=self.device,
+        )
+        rewards = (
+            old_costs[:, None, None] - candidate_costs
+        ) / old_costs[:, None, None]
+        winners = torch.as_tensor(
+            portfolio.winners, dtype=torch.long, device=self.device
+        )
+        runners_up = torch.as_tensor(
+            portfolio.runners_up, dtype=torch.long, device=self.device
+        )
+        credits = exact_functional_credits(
+            rewards, winners, runners_up, derangement
+        )
+
+        trajectory_log_prob = step_probs.clamp_min(1e-12).log().sum(dim=2)
+        trajectory_log_prob = trajectory_log_prob.reshape(
+            batch_size, self.bfws_replicas, self.bfws_num_codes
+        )
+        dual = self.bfws_dual.detach() if self.bfws_constraint_enabled else 0.0
+        total_credit = credits.reward + dual * credits.specialization
+        loss = -(total_credit.detach() * trajectory_log_prob).sum()
+        self.scaler.scale(loss).backward()
+
+        value = credits.diagnostics["bfws"].detach()
+        if self.bfws_value_ema is None:
+            self.bfws_value_ema = value
+        else:
+            decay = self.bfws_dual_ema_decay
+            self.bfws_value_ema = (
+                decay * self.bfws_value_ema + (1.0 - decay) * value
+            )
+        if self.bfws_constraint_enabled:
+            with torch.no_grad():
+                self.bfws_dual.add_(
+                    self.bfws_dual_lr
+                    * (self.bfws_target - self.bfws_value_ema)
+                ).clamp_(0.0, self.bfws_dual_max)
+
+        best_reward = rewards.max(dim=2).values
+        diagnostics = credits.diagnostics
+        metrics = {
+            "score": diagnostics["j_k"].item(),
+            "loss": loss.item(),
+            "reward": rewards.mean().item(),
+            "improved_frac": (best_reward > 1e-5).float().mean().item(),
+            "positive_rollout_frac": (rewards > 1e-5).float().mean().item(),
+            "dpp_logdet": 0.0,
+            "dpp_marginal": 0.0,
+            "dpp_similarity": 0.0,
+            "dpp_gradient_scale": 0.0,
+            "bfws": diagnostics["bfws"].item(),
+            "bfws_same": diagnostics["same_agreement"].item(),
+            "bfws_mismatched": diagnostics["mismatched_agreement"].item(),
+            "bfws_effective_codes": diagnostics["effective_codes"].item(),
+            "bfws_joint_failure": diagnostics["joint_failure"].item(),
+            "bfws_winner_margin": diagnostics["winner_margin"].item(),
+            "bfws_reward_credit_l1": diagnostics["reward_credit_l1"].item(),
+            "bfws_credit_l1": diagnostics["bfws_credit_l1"].item(),
+            "bfws_dual": self.bfws_dual.item(),
+            "bfws_target": self.bfws_target,
+            "portfolio_accepted_frac": float(portfolio.accepted.mean()),
+        }
+        for code, frequency in enumerate(diagnostics["winner_frequency"]):
+            metrics[f"bfws_winner_frequency_{code}"] = frequency.item()
+        return metrics
 
     def _perform_rollout(self, state) -> Tuple[torch.Tensor, torch.Tensor]:
         """Return selected-action probabilities and the first full distribution."""
@@ -503,6 +723,10 @@ class Trainer:
 
     def _search_one_batch(self, batch_size: int) -> None:
         """Perform auxiliary search pass for warm-up (no gradients)."""
+        if self.bfws_enabled:
+            self._search_one_batch_bfws(batch_size)
+            return
+
         recreate_n = self.env_params["recreate_n"]
         beta = self.env_params["beta"]
         insert_in_new_tours_only = self.env_params["insert_in_new_tours_only"]
@@ -536,6 +760,42 @@ class Trainer:
                 insert_in_new_tours_only=insert_in_new_tours_only,
             )
 
+    def _search_one_batch_bfws(self, batch_size: int) -> None:
+        """Advance warm-up states with the deployment PortfolioStep."""
+        self.model.eval()
+        self.env.set_rollout_size(self.bfws_num_codes)
+        tie_priorities = torch.rand(
+            batch_size, 1, self.bfws_num_codes, device=self.device
+        )
+        acceptance_uniforms = torch.rand(batch_size, device=self.device)
+
+        with torch.no_grad():
+            state = self.env.reset()
+            reset_state = self.env.get_model_input(self.device)
+            codes = self.seed_sampler.repeat_fixed(
+                self.bfws_code_indices, batch_size, replicas=1
+            )
+            with torch.amp.autocast(device_type=self.device.type):
+                self.model.pre_forward(reset_state, codes)
+            done = False
+            while not done:
+                with torch.amp.autocast(device_type=self.device.type):
+                    selected, _, _ = self.model(state)
+                state, done = self.env.step(selected)
+
+            self.env.instanceSet.remove_recreate_portfolio(
+                self.env.selected_node_list.cpu().numpy(),
+                self.bfws_num_codes,
+                self.env_params["recreate_n"],
+                T=0.0,
+                beta=self.env_params["beta"],
+                insert_in_new_tours_only=self.env_params[
+                    "insert_in_new_tours_only"
+                ],
+                tie_priorities=tie_priorities.cpu().numpy(),
+                acceptance_uniforms=acceptance_uniforms.cpu().numpy(),
+            )
+
     def _update_metrics(
         self,
         metrics: Dict[str, AverageMeter],
@@ -561,6 +821,8 @@ class Trainer:
             f'Positive: {metrics["positive_rollout_frac"].avg:5.3f}  |  '
             f'DPP: {metrics["dpp_logdet"].avg:6.3f}  |  '
             f'Sim: {metrics["dpp_similarity"].avg:5.3f}  |  '
+            f'BFWS: {metrics["bfws"].avg:6.3f}  |  '
+            f'Keff: {metrics["bfws_effective_codes"].avg:5.2f}  |  '
             f'Cost: {np.mean(final_costs):7.2f}'
         )
 
@@ -580,6 +842,9 @@ class Trainer:
             f'Positive: {metrics["positive_rollout_frac"].avg:5.3f}  |  '
             f'DPP: {metrics["dpp_logdet"].avg:6.3f}  |  '
             f'Sim: {metrics["dpp_similarity"].avg:5.3f}  |  '
+            f'BFWS: {metrics["bfws"].avg:6.3f}  |  '
+            f'Keff: {metrics["bfws_effective_codes"].avg:5.2f}  |  '
+            f'Dual: {metrics["bfws_dual"].avg:5.3f}  |  '
             f'Cost: {np.mean(final_costs):7.2f}'
         )
 
@@ -607,10 +872,37 @@ class Trainer:
                 "train/dpp_gradient_scale": metrics[
                     "dpp_gradient_scale"
                 ].avg,
+                "train/bfws": metrics["bfws"].avg,
+                "train/bfws_same": metrics["bfws_same"].avg,
+                "train/bfws_mismatched": metrics["bfws_mismatched"].avg,
+                "train/bfws_effective_codes": metrics[
+                    "bfws_effective_codes"
+                ].avg,
+                "train/bfws_joint_failure": metrics[
+                    "bfws_joint_failure"
+                ].avg,
+                "train/bfws_winner_margin": metrics[
+                    "bfws_winner_margin"
+                ].avg,
+                "train/bfws_dual": metrics["bfws_dual"].avg,
+                "train/bfws_target": metrics["bfws_target"].avg,
+                "train/portfolio_accepted_frac": metrics[
+                    "portfolio_accepted_frac"
+                ].avg,
                 "train/final_costs": np.mean(final_costs),
                 "time/epoch": duration,
             },
         )
+        if self.bfws_enabled:
+            wandb.log(
+                step=epoch,
+                data={
+                    f"train/bfws_winner_frequency/{code}": metrics[
+                        f"bfws_winner_frequency_{code}"
+                    ].avg
+                    for code in range(self.bfws_num_codes)
+                },
+            )
 
     def _log_timing(self, epoch: int, total_epochs: int) -> None:
         """Log elapsed and remaining time estimates."""
@@ -654,5 +946,21 @@ class Trainer:
                 None
                 if self.dpp_reward_ema is None
                 else self.dpp_reward_ema.detach().cpu()
+            ),
+            "trainer_params": self.trainer_params,
+            "bfws_state": (
+                None
+                if not self.bfws_enabled
+                else {
+                    "enabled": True,
+                    "num_codes": self.bfws_num_codes,
+                    "code_indices": self.bfws_code_indices.detach().cpu(),
+                    "dual": self.bfws_dual.detach().cpu(),
+                    "value_ema": (
+                        None
+                        if self.bfws_value_ema is None
+                        else self.bfws_value_ema.detach().cpu()
+                    ),
+                }
             ),
         }

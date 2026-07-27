@@ -68,6 +68,33 @@ class SeedVectorSampler:
             .reshape(batch_size, rollout_size, self.z_dim)
         )
 
+    def fixed_indices(self, num_codes: int, seed: int) -> torch.Tensor:
+        """Choose a reproducible set of distinct persistent code indices."""
+        if not 1 <= num_codes <= self.binary_pool.size(0):
+            raise ValueError(
+                f"num_codes must be in [1, {self.binary_pool.size(0)}]"
+            )
+        generator = torch.Generator(device="cpu")
+        generator.manual_seed(seed)
+        return torch.randperm(
+            self.binary_pool.size(0), generator=generator
+        )[:num_codes].to(self.device)
+
+    def repeat_fixed(
+        self,
+        code_indices: torch.Tensor,
+        batch_size: int,
+        replicas: int = 1,
+    ) -> torch.Tensor:
+        """Repeat the same ordered persistent code panel across a batch."""
+        if code_indices.ndim != 1:
+            raise ValueError("code_indices must be one-dimensional")
+        if replicas < 1:
+            raise ValueError("replicas must be positive")
+        panel = self.binary_pool[code_indices.to(self.device)]
+        panel = panel.repeat(replicas, 1)
+        return panel.unsqueeze(0).expand(batch_size, -1, -1)
+
     @property
     def pool(self) -> torch.Tensor:
         """Access to the underlying binary pool tensor."""

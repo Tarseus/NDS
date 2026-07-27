@@ -2,10 +2,21 @@
 
 import math
 import multiprocessing
+from dataclasses import dataclass
 from typing import List, Tuple, Any, Optional
 
 import cppimport.import_hook
 import numpy as np
+
+
+@dataclass
+class PortfolioResult:
+    """Result of one or more same-incumbent code tournaments."""
+
+    candidate_costs: np.ndarray
+    winners: np.ndarray
+    runners_up: np.ndarray
+    accepted: np.ndarray
 
 
 def _load_cpp_operations(problem: str):
@@ -153,6 +164,12 @@ def worker(
                 )
                 result_queue.put([candidate_costs, solution_costs, tours])
 
+            elif mode == "remove_recreate_portfolio":
+                portfolio = _handle_remove_recreate_portfolio(
+                    NDSOps, solutions, solution_costs, tours, data
+                )
+                result_queue.put([portfolio, solution_costs, tours])
+
     except Exception as error:
         print(f"Worker exception occurred: {error}")
 
@@ -269,6 +286,141 @@ def _handle_remove_recreate(
     return candidate_costs
 
 
+def _rank_candidates(costs: np.ndarray, priorities: np.ndarray) -> np.ndarray:
+    """Rank by lower cost, then higher action-independent tie priority."""
+    indices = np.arange(costs.shape[0])
+    return np.lexsort((indices, -priorities, costs))
+
+
+def _run_portfolio_for_solution(
+    NDSOps,
+    solution,
+    selected_nodes: np.ndarray,
+    portfolio_size: int,
+    recreate_n: int,
+    temperature: float,
+    beta: float,
+    insert_in_new_tours_only: bool,
+    tie_priorities: np.ndarray,
+    acceptance_uniform: float,
+    commit_replica: int,
+):
+    """Evaluate independent tournaments and commit one winner with SA."""
+    if selected_nodes.shape[0] % portfolio_size != 0:
+        raise ValueError("rollout count must be divisible by portfolio_size")
+    replicas = selected_nodes.shape[0] // portfolio_size
+    if tie_priorities.shape != (replicas, portfolio_size):
+        raise ValueError("tie_priorities shape must be (replicas, portfolio_size)")
+    if not 0 <= commit_replica < replicas:
+        raise ValueError("commit_replica is out of range")
+
+    candidate_costs = np.empty((replicas, portfolio_size), dtype=np.float32)
+    winners = np.empty(replicas, dtype=np.int64)
+    runners_up = np.empty(replicas, dtype=np.int64)
+    best_solutions = []
+
+    for replica in range(replicas):
+        begin = replica * portfolio_size
+        end = begin + portfolio_size
+        priorities = tie_priorities[replica]
+
+        group_nodes = selected_nodes[begin:end]
+        priority_function = getattr(
+            NDSOps, "remove_recreate_singleImp_priority", None
+        )
+        if priority_function is None:
+            raise RuntimeError(
+                "BFWS requires the priority-aware C++ repair binding; "
+                "rebuild the cppimport module"
+            )
+        best_solution, raw_costs = priority_function(
+            solution,
+            group_nodes,
+            priorities,
+            beta,
+            recreate_n,
+            insert_in_new_tours_only,
+        )
+        costs = np.asarray(raw_costs, dtype=np.float32)
+        ranking = _rank_candidates(costs, priorities)
+
+        candidate_costs[replica] = costs
+        winners[replica] = ranking[0]
+        runners_up[replica] = ranking[1]
+        best_solutions.append(best_solution)
+
+    old_cost = float(solution.totalCosts)
+    proposal = best_solutions[commit_replica]
+    proposal_cost = float(candidate_costs[commit_replica, winners[commit_replica]])
+    if temperature < 0:
+        raise ValueError("temperature must be non-negative")
+    if temperature == 0:
+        accepted = proposal_cost < old_cost
+    else:
+        uniform = float(np.clip(acceptance_uniform, np.finfo(float).tiny, 1.0))
+        threshold = old_cost - temperature * np.log(uniform)
+        accepted = proposal_cost < threshold
+
+    return (
+        proposal if accepted else solution,
+        candidate_costs,
+        winners,
+        runners_up,
+        accepted,
+    )
+
+
+def _handle_remove_recreate_portfolio(
+    NDSOps, solutions: List, solution_costs: List, tours: List, data: Tuple
+) -> Tuple[List, List, List, List]:
+    """Worker-compatible batched PortfolioStep implementation."""
+    (
+        selected_nodes,
+        portfolio_size,
+        recreate_n,
+        temperature,
+        beta,
+        insert_in_new_tours_only,
+        tie_priorities,
+        acceptance_uniforms,
+        commit_replica,
+    ) = data
+
+    all_costs = []
+    all_winners = []
+    all_runners_up = []
+    all_accepted = []
+    for index, solution in enumerate(solutions):
+        (
+            updated,
+            costs,
+            winners,
+            runners_up,
+            accepted,
+        ) = _run_portfolio_for_solution(
+            NDSOps,
+            solution,
+            selected_nodes[index],
+            portfolio_size,
+            recreate_n,
+            temperature,
+            beta,
+            insert_in_new_tours_only,
+            tie_priorities[index],
+            acceptance_uniforms[index],
+            commit_replica,
+        )
+        solutions[index] = updated
+        solution_costs[index] = updated.totalCosts
+        tours[index] = updated.getTourList()
+        all_costs.append(costs)
+        all_winners.append(winners)
+        all_runners_up.append(runners_up)
+        all_accepted.append(accepted)
+
+    return all_costs, all_winners, all_runners_up, all_accepted
+
+
 class InstanceSet:
     """
     Manages a set of VRP c++ instances objects and their solutions.
@@ -381,6 +533,68 @@ class InstanceSet:
                 selected_nodes, recreate_n, mode, T, beta, insert_in_new_tours_only
             )
 
+    def remove_recreate_portfolio(
+        self,
+        selected_nodes: np.ndarray,
+        portfolio_size: int,
+        recreate_n: int,
+        T: float = 0,
+        beta: float = 0.0,
+        insert_in_new_tours_only: bool = True,
+        tie_priorities: Optional[np.ndarray] = None,
+        acceptance_uniforms: Optional[np.ndarray] = None,
+        commit_replica: int = 0,
+    ) -> PortfolioResult:
+        """Evaluate same-incumbent tournaments and commit one SA proposal."""
+        selected_nodes = np.asarray(selected_nodes)
+        if selected_nodes.ndim != 3 or selected_nodes.shape[0] != self.batch_size:
+            raise ValueError(
+                "selected_nodes must have shape (batch, rollouts, removed_nodes)"
+            )
+        if portfolio_size < 2:
+            raise ValueError("portfolio_size must be at least two")
+        if selected_nodes.shape[1] % portfolio_size != 0:
+            raise ValueError("rollout count must be divisible by portfolio_size")
+        replicas = selected_nodes.shape[1] // portfolio_size
+        expected_priority_shape = (self.batch_size, replicas, portfolio_size)
+        if tie_priorities is None:
+            tie_priorities = np.random.random(expected_priority_shape)
+        tie_priorities = np.asarray(tie_priorities, dtype=np.float64)
+        if tie_priorities.shape != expected_priority_shape:
+            raise ValueError(
+                f"tie_priorities must have shape {expected_priority_shape}"
+            )
+        if acceptance_uniforms is None:
+            acceptance_uniforms = np.random.random(self.batch_size)
+        acceptance_uniforms = np.asarray(acceptance_uniforms, dtype=np.float64)
+        if acceptance_uniforms.shape != (self.batch_size,):
+            raise ValueError("acceptance_uniforms must have shape (batch,)")
+
+        args = (
+            selected_nodes,
+            portfolio_size,
+            recreate_n,
+            T,
+            beta,
+            insert_in_new_tours_only,
+            tie_priorities,
+            acceptance_uniforms,
+            commit_replica,
+        )
+        if self.use_multiprocessing:
+            raw = self._remove_recreate_portfolio_mp(args)
+        else:
+            raw = _handle_remove_recreate_portfolio(
+                self.NDSOps, self._solutions, self.costs, self.tours, args
+            )
+        costs, winners, runners_up, accepted = raw
+        return PortfolioResult(
+            candidate_costs=np.asarray(costs, dtype=np.float32),
+            winners=np.asarray(winners, dtype=np.int64),
+            runners_up=np.asarray(runners_up, dtype=np.int64),
+            accepted=np.asarray(accepted, dtype=bool),
+        )
+
     def _init_instances_mp(self, problem_data) -> None:
         """Initialize instances using multiprocessing."""
         self.batch_size = problem_data.depot_node_xy.shape[0]
@@ -438,6 +652,57 @@ class InstanceSet:
             candidate_costs_set.extend(candidate_costs)
 
         return candidate_costs_set
+
+    def _remove_recreate_portfolio_mp(self, args: Tuple) -> Tuple:
+        """Run PortfolioStep using the persistent worker processes."""
+        instances_per_process = math.ceil(self.batch_size / self.num_processes)
+        (
+            selected_nodes,
+            portfolio_size,
+            recreate_n,
+            temperature,
+            beta,
+            insert_in_new_tours_only,
+            tie_priorities,
+            acceptance_uniforms,
+            commit_replica,
+        ) = args
+        for index, (_, input_queue, _) in enumerate(self.processes):
+            begin = index * instances_per_process
+            end = begin + instances_per_process
+            input_queue.put(
+                [
+                    "remove_recreate_portfolio",
+                    (
+                        selected_nodes[begin:end],
+                        portfolio_size,
+                        recreate_n,
+                        temperature,
+                        beta,
+                        insert_in_new_tours_only,
+                        tie_priorities[begin:end],
+                        acceptance_uniforms[begin:end],
+                        commit_replica,
+                    ),
+                ]
+            )
+
+        costs = []
+        winners = []
+        runners_up = []
+        accepted = []
+        self.costs = []
+        self.tours = []
+        for _, _, output_queue in self.processes:
+            portfolio, worker_costs, worker_tours = output_queue.get()
+            p_costs, p_winners, p_runners, p_accepted = portfolio
+            costs.extend(p_costs)
+            winners.extend(p_winners)
+            runners_up.extend(p_runners)
+            accepted.extend(p_accepted)
+            self.costs.extend(worker_costs)
+            self.tours.extend(worker_tours)
+        return costs, winners, runners_up, accepted
 
     def _init_instances_sp(self, problem_data) -> None:
         """Initialize instances in single-process mode."""

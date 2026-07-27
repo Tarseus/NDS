@@ -6,6 +6,7 @@
  */
 
 #include "Operations.h"
+#include <stdexcept>
 #include <map>
 
 // Sort customers by various criteria (random, demand, distance from depot) as described in the SISRs paper
@@ -178,6 +179,53 @@ std::tuple<Solution, std::vector<float>> remove_recreate_singleImp(
     // Accept the best found solution across all removal sets
     solution.acceptModifiedSolution(outerBestSol);
 
+    return std::make_tuple(solution, costs);
+}
+
+std::tuple<Solution, std::vector<float>> remove_recreate_singleImp_priority(
+    Solution solution,
+    std::vector<std::vector<int>>& A,
+    const std::vector<float>& priorities,
+    float beta,
+    int n,
+    bool insertInNewToursOnly)
+{
+    if (priorities.size() != A.size()) {
+        throw std::invalid_argument("priorities must match removal sets");
+    }
+
+    float outerBestCost = std::numeric_limits<float>::infinity();
+    float outerBestPriority = -std::numeric_limits<float>::infinity();
+    ModifiedSolution outerBestSol(solution);
+    std::vector<float> costs(A.size(), std::numeric_limits<float>::infinity());
+
+    for (size_t i = 0; i < A.size(); ++i) {
+        ModifiedSolution baseMsol(solution);
+        baseMsol.removeCustomers(A[i]);
+        std::vector<int> removedCustomers = A[i];
+        float innerBestCost = std::numeric_limits<float>::infinity();
+
+        for (int j = 0; j < n; ++j) {
+            if (j > 0) {
+                sort_abs_cust(removedCustomers, solution.instance, 'R');
+            }
+            ModifiedSolution msolCopy(baseMsol);
+            msolCopy.repair(removedCustomers, beta, insertInNewToursOnly);
+            if (msolCopy.totalCosts < innerBestCost) {
+                innerBestCost = msolCopy.totalCosts;
+            }
+            if (msolCopy.totalCosts < outerBestCost ||
+                (msolCopy.totalCosts == outerBestCost &&
+                 priorities[i] > outerBestPriority)) {
+                outerBestCost = msolCopy.totalCosts;
+                outerBestPriority = priorities[i];
+                outerBestSol = msolCopy;
+            }
+        }
+        costs[i] = innerBestCost;
+    }
+
+    solution.acceptModifiedSolution(outerBestSol);
     return std::make_tuple(solution, costs);
 }
 

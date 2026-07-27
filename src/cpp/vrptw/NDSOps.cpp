@@ -81,6 +81,12 @@ PYBIND11_MODULE(NDSOps, m) {
           "Remove and recreate operation with single improvement",
           py::arg("solution"), py::arg("A"), py::arg("beta"), py::arg("n"), py::arg("insertInNewToursOnly"),
           py::return_value_policy::take_ownership);
+
+    m.def("remove_recreate_singleImp_priority", &remove_recreate_singleImp_priority,
+          "Single improvement with random priorities used only for exact ties",
+          py::arg("solution"), py::arg("A"), py::arg("priorities"),
+          py::arg("beta"), py::arg("n"), py::arg("insertInNewToursOnly"),
+          py::return_value_policy::take_ownership);
           
     m.def("heuristic_deconstruction_selection", &heuristic_deconstruction_selection, 
           "Heuristic selection of customers for deconstruction",

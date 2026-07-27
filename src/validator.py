@@ -15,6 +15,7 @@ from .logging_utils import (
     AverageMeter,
 )
 from .seed_sampler import SeedVectorSampler
+from .bfws import bfws_value, random_derangement
 
 
 class Validator:
@@ -27,6 +28,7 @@ class Validator:
         trainer_params: Dict[str, Any],
         model_params: Dict[str, Any],
         logger_params: Dict[str, Any],
+        fixed_code_indices: torch.Tensor = None,
     ):
         """Initialize validator with configuration parameters."""
         self.env_params = env_params
@@ -43,6 +45,18 @@ class Validator:
 
         # Seed vector sampler
         self.seed_sampler = SeedVectorSampler(model_params["z_dim"], device)
+        bfws_params = self.trainer_params.get("bfws", {})
+        self.bfws_enabled = bool(bfws_params.get("enabled", False))
+        self.bfws_num_codes = int(bfws_params.get("num_codes", 8))
+        if self.bfws_enabled:
+            if fixed_code_indices is None:
+                fixed_code_indices = self.seed_sampler.fixed_indices(
+                    self.bfws_num_codes,
+                    int(bfws_params.get("code_seed", 20260726)),
+                )
+            self.bfws_code_indices = fixed_code_indices.to(device)
+        else:
+            self.bfws_code_indices = None
 
         # Experiment tracking
         self.use_wandb = logger_params["wandb"]["enable"]
@@ -57,6 +71,13 @@ class Validator:
             "aug_score": AverageMeter(),
             "diversity_overlap": AverageMeter(),
             "unique_rollouts": AverageMeter(),
+            "portfolio_j_k": AverageMeter(),
+            "bfws": AverageMeter(),
+            "bfws_same": AverageMeter(),
+            "bfws_mismatched": AverageMeter(),
+            "bfws_effective_codes": AverageMeter(),
+            "bfws_joint_failure": AverageMeter(),
+            "portfolio_accepted_frac": AverageMeter(),
         }
 
         # Load validation dataset if specified
@@ -120,7 +141,13 @@ class Validator:
             batch_size = min(self.trainer_params["valid_batch_size"], remaining)
 
             # Validate one batch
-            score, aug_score, logs_episode, diversity = self._validate_one_batch(
+            (
+                score,
+                aug_score,
+                logs_episode,
+                diversity,
+                portfolio_stats,
+            ) = self._validate_one_batch(
                 model,
                 frozen_model,
                 batch_size,
@@ -133,6 +160,8 @@ class Validator:
             metrics["aug_score"].update(aug_score, batch_size)
             metrics["diversity_overlap"].update(diversity[0], batch_size)
             metrics["unique_rollouts"].update(diversity[1], batch_size)
+            for name, value in portfolio_stats.items():
+                metrics[name].update(value, batch_size)
 
             episode += batch_size
 
@@ -146,9 +175,13 @@ class Validator:
         batch_size: int,
         nb_iterations: int,
         aug_factor: int = 1,
-    ) -> Tuple[float, float, np.ndarray, Tuple[float, float]]:
-        """Validate one batch and return (score, aug_score, logs, diversity)."""
-        rollout_size = self.trainer_params["valid_rollout_size"]
+    ) -> Tuple:
+        """Validate one batch and return scores, diversity and portfolio stats."""
+        rollout_size = (
+            2 * self.bfws_num_codes
+            if self.bfws_enabled
+            else self.trainer_params["valid_rollout_size"]
+        )
         z_dim = model.model_params["z_dim"]
         recreate_n = self.env_params["recreate_n"]
         beta = self.env_params["beta"]
@@ -156,18 +189,40 @@ class Validator:
         aug_batch_size = batch_size * aug_factor
 
         logs = np.zeros((batch_size, nb_iterations))
+        portfolio_history = []
 
         model.eval()
         with torch.no_grad():
             self.env.init_instances(batch_size, rollout_size, self.device, aug_factor)
 
             for i in range(nb_iterations):
+                if self.bfws_enabled:
+                    tie_priorities = torch.rand(
+                        aug_batch_size,
+                        2,
+                        self.bfws_num_codes,
+                        device=self.device,
+                    )
+                    acceptance_uniforms = torch.rand(
+                        aug_batch_size, device=self.device
+                    )
+                    derangement = (
+                        random_derangement(aug_batch_size, self.device)
+                        if aug_batch_size > 1
+                        else torch.zeros(1, dtype=torch.long, device=self.device)
+                    )
+
                 # Reset and get state
                 state = self.env.reset()
                 reset_state = self.env.get_model_input(self.device)
 
                 # Sample latent vectors
-                z = self.seed_sampler.sample(aug_batch_size, rollout_size)
+                if self.bfws_enabled:
+                    z = self.seed_sampler.repeat_fixed(
+                        self.bfws_code_indices, aug_batch_size, replicas=2
+                    )
+                else:
+                    z = self.seed_sampler.sample(aug_batch_size, rollout_size)
 
                 # Forward pass
                 with torch.amp.autocast(device_type=self.device.type):
@@ -182,28 +237,110 @@ class Validator:
 
                 # Apply repair
                 selected_nodes = self.env.selected_node_list.cpu().numpy()
-                self.env.instanceSet.remove_recreate(
-                    selected_nodes,
-                    recreate_n,
-                    "allImp",
-                    T=0,
-                    beta=beta,
-                    insert_in_new_tours_only=insert_in_new_tours_only,
-                )
+                if self.bfws_enabled:
+                    old_costs = torch.as_tensor(
+                        self.env.instanceSet.costs,
+                        dtype=torch.float32,
+                        device=self.device,
+                    )
+                    if torch.any(old_costs <= 0):
+                        raise ValueError(
+                            "BFWS relative rewards require positive incumbent costs"
+                        )
+                    portfolio = self.env.instanceSet.remove_recreate_portfolio(
+                        selected_nodes,
+                        self.bfws_num_codes,
+                        recreate_n,
+                        T=0,
+                        beta=beta,
+                        insert_in_new_tours_only=insert_in_new_tours_only,
+                        tie_priorities=tie_priorities.cpu().numpy(),
+                        acceptance_uniforms=acceptance_uniforms.cpu().numpy(),
+                    )
+                    candidate_costs = torch.as_tensor(
+                        portfolio.candidate_costs,
+                        dtype=torch.float32,
+                        device=self.device,
+                    )
+                    rewards = (
+                        old_costs[:, None, None] - candidate_costs
+                    ) / old_costs[:, None, None]
+                    winners = torch.as_tensor(
+                        portfolio.winners,
+                        dtype=torch.long,
+                        device=self.device,
+                    )
+                    value, same, mismatched = bfws_value(
+                        winners, derangement, self.bfws_num_codes
+                    )
+                    frequency = torch.bincount(
+                        winners.reshape(-1), minlength=self.bfws_num_codes
+                    ).float()
+                    frequency = frequency / frequency.sum()
+                    best_reward = rewards.max(dim=2).values
+                    portfolio_history.append(
+                        {
+                            "portfolio_j_k": best_reward.mean().item(),
+                            "bfws": value.item(),
+                            "bfws_same": same.item(),
+                            "bfws_mismatched": mismatched.item(),
+                            "bfws_effective_codes": frequency.square()
+                            .sum()
+                            .reciprocal()
+                            .item(),
+                            "bfws_joint_failure": (best_reward <= 0)
+                            .float()
+                            .mean()
+                            .item(),
+                            "portfolio_accepted_frac": float(
+                                portfolio.accepted.mean()
+                            ),
+                        }
+                    )
+                else:
+                    self.env.instanceSet.remove_recreate(
+                        selected_nodes,
+                        recreate_n,
+                        "allImp",
+                        T=0,
+                        beta=beta,
+                        insert_in_new_tours_only=insert_in_new_tours_only,
+                    )
 
                 # Log costs (best across augmentations)
                 costs = np.array(self.env.instanceSet.costs)
                 logs[:, i] = costs.reshape(aug_factor, -1).min(axis=0)
 
             # Compute diversity metrics
-            diversity = self._calculate_diversity(selected_nodes)
+            diversity_nodes = (
+                selected_nodes[:, : self.bfws_num_codes]
+                if self.bfws_enabled
+                else selected_nodes
+            )
+            diversity = self._calculate_diversity(diversity_nodes)
 
             # Compute final scores
             aug_costs = np.array(self.env.instanceSet.costs).reshape(aug_factor, -1)
             no_aug_score = np.mean(aug_costs[0])
             aug_score = np.mean(aug_costs.min(axis=0))
 
-            return no_aug_score, aug_score, logs, diversity
+            if portfolio_history:
+                portfolio_stats = {
+                    name: float(np.mean([row[name] for row in portfolio_history]))
+                    for name in portfolio_history[0]
+                }
+            else:
+                portfolio_stats = {
+                    "portfolio_j_k": 0.0,
+                    "bfws": 0.0,
+                    "bfws_same": 0.0,
+                    "bfws_mismatched": 0.0,
+                    "bfws_effective_codes": 0.0,
+                    "bfws_joint_failure": 0.0,
+                    "portfolio_accepted_frac": 0.0,
+                }
+
+            return no_aug_score, aug_score, logs, diversity, portfolio_stats
 
     def _calculate_diversity(self, selected_nodes: np.ndarray) -> Tuple[float, float]:
         """Calculate diversity metrics: overlap score and unique rollout ratio."""
@@ -242,7 +379,7 @@ class Validator:
         model.model_params["eval_type"] = "argmax"
         self.env.problem.saved_index = 0
 
-        _, _, _, greedy_diversity = self._validate_one_batch(
+        _, _, _, greedy_diversity, _ = self._validate_one_batch(
             model,
             frozen_model,
             self.trainer_params["valid_batch_size"],
@@ -273,6 +410,16 @@ class Validator:
         self.logger.info(f"Aug Score:       {metrics['aug_score'].avg:7.3f}")
         self.logger.info(f"Diversity Score: {metrics['diversity_overlap'].avg:7.4f}")
         self.logger.info(f"Unique Rollouts: {metrics['unique_rollouts'].avg:7.4f}")
+        if self.bfws_enabled:
+            self.logger.info(f"Portfolio J_K:   {metrics['portfolio_j_k'].avg:7.5f}")
+            self.logger.info(f"BFWS:            {metrics['bfws'].avg:7.4f}")
+            self.logger.info(
+                f"Winner Agreement: {metrics['bfws_same'].avg:7.4f} same / "
+                f"{metrics['bfws_mismatched'].avg:7.4f} mismatched"
+            )
+            self.logger.info(
+                f"Effective Codes:  {metrics['bfws_effective_codes'].avg:7.3f}"
+            )
         self.logger.info("=" * 80)
 
     def _log_to_wandb(
@@ -290,5 +437,15 @@ class Validator:
                 "val/diversity_score": metrics["diversity_overlap"].avg,
                 "val/unique_rollouts": metrics["unique_rollouts"].avg,
                 "val/greedy_unique_rollout": greedy_diversity[1],
+                "val/portfolio_j_k": metrics["portfolio_j_k"].avg,
+                "val/bfws": metrics["bfws"].avg,
+                "val/bfws_same": metrics["bfws_same"].avg,
+                "val/bfws_mismatched": metrics["bfws_mismatched"].avg,
+                "val/bfws_effective_codes": metrics[
+                    "bfws_effective_codes"
+                ].avg,
+                "val/bfws_joint_failure": metrics[
+                    "bfws_joint_failure"
+                ].avg,
             },
         )

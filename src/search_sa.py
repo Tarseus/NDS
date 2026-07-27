@@ -94,6 +94,36 @@ class Search:
 
             # Create seed vector sampler
             seed_sampler = SeedVectorSampler(model_params["z_dim"], self.device)
+            bfws_state = checkpoint.get("bfws_state")
+            portfolio_params = self.tester_params.get("portfolio", {})
+            default_portfolio = bool(
+                bfws_state and bfws_state.get("enabled", False)
+            )
+            portfolio_enabled = bool(
+                portfolio_params.get("enabled", default_portfolio)
+            )
+            fixed_code_indices = None
+            portfolio_size = None
+            if portfolio_enabled:
+                if bfws_state and bfws_state.get("code_indices") is not None:
+                    fixed_code_indices = torch.as_tensor(
+                        bfws_state["code_indices"],
+                        dtype=torch.long,
+                        device=self.device,
+                    )
+                else:
+                    portfolio_size = int(portfolio_params.get("num_codes", 8))
+                    fixed_code_indices = seed_sampler.fixed_indices(
+                        portfolio_size,
+                        int(portfolio_params.get("code_seed", 20260726)),
+                    )
+                portfolio_size = int(fixed_code_indices.numel())
+                if torch.unique(fixed_code_indices).numel() != portfolio_size:
+                    raise ValueError("PortfolioStep codes must be distinct")
+                if torch.any(fixed_code_indices < 0) or torch.any(
+                    fixed_code_indices >= seed_sampler.pool.size(0)
+                ):
+                    raise ValueError("PortfolioStep code index is outside the seed pool")
 
             # Verify configuration matches
             assert (
@@ -102,7 +132,14 @@ class Search:
             ), f"Model trained with different num_nodes_to_remove: {checkpoint['env_params']['num_nodes_to_remove']} vs {model_config['node_to_remove']}"
 
             operators.append(
-                {"model": model, "seed_sampler": seed_sampler, **model_config}
+                {
+                    "model": model,
+                    "seed_sampler": seed_sampler,
+                    "portfolio_enabled": portfolio_enabled,
+                    "portfolio_size": portfolio_size,
+                    "fixed_code_indices": fixed_code_indices,
+                    **model_config,
+                }
             )
 
             self.logger.info(f"Loaded deconstruction policy from {checkpoint_path}")
@@ -179,6 +216,20 @@ class Search:
         aug_factor = self.tester_params["aug_factor"]
         max_iterations = self.tester_params["nb_iterations"]
         rollout_size = self.tester_params["rollout_size"]
+        portfolio_sizes = {
+            operator["portfolio_size"]
+            for operator in self.destroy_operators
+            if operator["portfolio_enabled"]
+        }
+        if portfolio_sizes:
+            if len(portfolio_sizes) != 1 or not all(
+                operator["portfolio_enabled"]
+                for operator in self.destroy_operators
+            ):
+                raise ValueError(
+                    "all loaded destroy operators must use the same PortfolioStep size"
+                )
+            rollout_size = next(iter(portfolio_sizes))
 
         # Initialize SA parameters
         sa_config = self._init_simulated_annealing()
@@ -283,7 +334,27 @@ class Search:
 
         # If using model, we need to perform destroy for all augmentations at once
         if use_model:
-            all_selected_nodes = self._select_nodes_with_model(aug_factor, rollout_size)
+            (
+                all_selected_nodes,
+                operator,
+                tie_priorities,
+                acceptance_uniforms,
+            ) = self._select_nodes_with_model(aug_factor, rollout_size)
+            if operator["portfolio_enabled"]:
+                self.env.instanceSet.remove_recreate_portfolio(
+                    all_selected_nodes,
+                    operator["portfolio_size"],
+                    recreate_n,
+                    T=temperature,
+                    beta=beta,
+                    insert_in_new_tours_only=insert_in_new_tours_only,
+                    tie_priorities=tie_priorities,
+                    acceptance_uniforms=acceptance_uniforms,
+                )
+                return [
+                    self.env.instanceSet.get_solution(index)
+                    for index in range(aug_factor)
+                ]
 
         new_solutions = []
 
@@ -316,7 +387,7 @@ class Search:
 
     def _select_nodes_with_model(
         self, aug_factor: int, rollout_size: int
-    ) -> np.ndarray:
+    ) -> Tuple[np.ndarray, Dict[str, Any], Optional[np.ndarray], Optional[np.ndarray]]:
         """
         Use learned neural network model to select nodes for removal.
 
@@ -326,13 +397,28 @@ class Search:
         operator = random.choice(self.destroy_operators)
         model = operator["model"]
         self.env.num_nodes_to_remove = operator["node_to_remove"]
+        self.env.set_rollout_size(rollout_size)
+
+        if operator["portfolio_enabled"]:
+            tie_priorities = torch.rand(
+                aug_factor, 1, operator["portfolio_size"], device=self.device
+            )
+            acceptance_uniforms = torch.rand(aug_factor, device=self.device)
+        else:
+            tie_priorities = None
+            acceptance_uniforms = None
 
         # Reset environment and get state
         state = self.env.reset()
         reset_state = self.env.get_model_input(self.device)
 
         # Sample latent vectors for all augmentations
-        z = operator["seed_sampler"].sample(aug_factor, rollout_size)
+        if operator["portfolio_enabled"]:
+            z = operator["seed_sampler"].repeat_fixed(
+                operator["fixed_code_indices"], aug_factor, replicas=1
+            )
+        else:
+            z = operator["seed_sampler"].sample(aug_factor, rollout_size)
 
         # Forward pass through model
         softmax_temp = self.tester_params["softmax_temp"]
@@ -349,7 +435,16 @@ class Search:
 
         # Extract selected nodes for all augmentations
         selected_nodes = self.env.selected_node_list.cpu().numpy()
-        return selected_nodes
+        return (
+            selected_nodes,
+            operator,
+            None if tie_priorities is None else tie_priorities.cpu().numpy(),
+            (
+                None
+                if acceptance_uniforms is None
+                else acceptance_uniforms.cpu().numpy()
+            ),
+        )
 
     def _synchronize_augmented_solutions(
         self, solutions: List[Any], temperature: float, delta: float

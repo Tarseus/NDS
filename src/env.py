@@ -152,6 +152,15 @@ class Env:
         self.step_state.BATCH_IDX = self.BATCH_IDX
         self.step_state.ROLLOUT_IDX = self.ROLLOUT_IDX
 
+    def set_rollout_size(self, rollout_size: int) -> None:
+        """Resize only the rollout axis while preserving current instances."""
+        if rollout_size < 1:
+            raise ValueError("rollout_size must be positive")
+        if self.device is None or self.batch_size is None:
+            raise RuntimeError("init_instances must be called before resizing rollouts")
+        self.rollout_size = rollout_size
+        self._init_index_tensors()
+
     def reset(self) -> StepState:
         """
         Reset environment for new episode.

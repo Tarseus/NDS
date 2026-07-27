@@ -1,0 +1,12 @@
+defaults:
+  - cvrp_100_fixed_code
+  - _self_
+
+trainer_params:
+  bfws:
+    constraint_enabled: true
+    # Set from the reward-only pilot; the final BFWS plan forbids guessing it.
+    target: ???
+
+logger_params:
+  desc: "train_cvrp_100_bfws"

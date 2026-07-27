@@ -26,6 +26,12 @@ std::tuple<Solution, std::vector<float>> remove_recreate_allImp(Solution solutio
 std::tuple<Solution, std::vector<float>> remove_recreate_singleImp(Solution solution, std::vector<std::vector<int>>& A, 
                                                                   float beta, int n, bool insertInNewToursOnly = true);
 
+// Same-incumbent evaluation with action-independent priorities for exact ties.
+std::tuple<Solution, std::vector<float>> remove_recreate_singleImp_priority(
+    Solution solution, std::vector<std::vector<int>>& A,
+    const std::vector<float>& priorities, float beta, int n,
+    bool insertInNewToursOnly = true);
+
 // Create a starting solution using random improvements
 Solution create_starting_solution(const Instance& instance, int nbImprovement, int nbDestroy);
 
