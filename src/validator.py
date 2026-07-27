@@ -49,6 +49,9 @@ class Validator:
         bfws_params = self.trainer_params.get("bfws", {})
         self.bfws_enabled = bool(bfws_params.get("enabled", False))
         self.bfws_num_codes = int(bfws_params.get("num_codes", 8))
+        self.bfws_resample_codes_each_step = bool(
+            bfws_params.get("resample_codes_each_step", False)
+        )
         self.valid_seed = self.trainer_params.get("valid_seed")
         if self.bfws_enabled:
             if fixed_code_indices is None:
@@ -222,9 +225,18 @@ class Validator:
 
                 # Sample latent vectors
                 if self.bfws_enabled:
-                    z = self.seed_sampler.repeat_fixed(
-                        self.bfws_code_indices, aug_batch_size, replicas=2
-                    )
+                    if self.bfws_resample_codes_each_step:
+                        z = self.seed_sampler.sample_shared_panel(
+                            aug_batch_size,
+                            self.bfws_num_codes,
+                            replicas=2,
+                        )
+                    else:
+                        z = self.seed_sampler.repeat_fixed(
+                            self.bfws_code_indices,
+                            aug_batch_size,
+                            replicas=2,
+                        )
                 else:
                     z = self.seed_sampler.sample(aug_batch_size, rollout_size)
 

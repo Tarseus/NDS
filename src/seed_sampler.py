@@ -95,6 +95,29 @@ class SeedVectorSampler:
         panel = panel.repeat(replicas, 1)
         return panel.unsqueeze(0).expand(batch_size, -1, -1)
 
+    def sample_shared_panel(
+        self,
+        batch_size: int,
+        num_codes: int,
+        replicas: int = 1,
+    ) -> torch.Tensor:
+        """Sample one distinct code panel and share it across a batch.
+
+        A fresh panel is drawn on every call. Replicas repeat the same ordered
+        panel so winner labels still refer to the same latent codes.
+        """
+        if not 1 <= num_codes <= self.binary_pool.size(0):
+            raise ValueError(
+                f"num_codes must be in [1, {self.binary_pool.size(0)}]"
+            )
+        if replicas < 1:
+            raise ValueError("replicas must be positive")
+        indices = torch.randperm(
+            self.binary_pool.size(0), device=self.device
+        )[:num_codes]
+        panel = self.binary_pool[indices].repeat(replicas, 1)
+        return panel.unsqueeze(0).expand(batch_size, -1, -1)
+
     @property
     def pool(self) -> torch.Tensor:
         """Access to the underlying binary pool tensor."""

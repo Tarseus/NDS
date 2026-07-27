@@ -102,10 +102,30 @@ class Search:
             portfolio_enabled = bool(
                 portfolio_params.get("enabled", default_portfolio)
             )
+            default_resample = bool(
+                bfws_state
+                and bfws_state.get("resample_codes_each_step", False)
+            )
+            resample_codes_each_step = bool(
+                portfolio_params.get(
+                    "resample_codes_each_step", default_resample
+                )
+            )
             fixed_code_indices = None
             portfolio_size = None
             if portfolio_enabled:
-                if bfws_state and bfws_state.get("code_indices") is not None:
+                if resample_codes_each_step:
+                    portfolio_size = int(
+                        portfolio_params.get(
+                            "num_codes",
+                            (
+                                bfws_state.get("num_codes", 8)
+                                if bfws_state
+                                else 8
+                            ),
+                        )
+                    )
+                elif bfws_state and bfws_state.get("code_indices") is not None:
                     fixed_code_indices = torch.as_tensor(
                         bfws_state["code_indices"],
                         dtype=torch.long,
@@ -117,13 +137,16 @@ class Search:
                         portfolio_size,
                         int(portfolio_params.get("code_seed", 20260726)),
                     )
-                portfolio_size = int(fixed_code_indices.numel())
-                if torch.unique(fixed_code_indices).numel() != portfolio_size:
-                    raise ValueError("PortfolioStep codes must be distinct")
-                if torch.any(fixed_code_indices < 0) or torch.any(
-                    fixed_code_indices >= seed_sampler.pool.size(0)
-                ):
-                    raise ValueError("PortfolioStep code index is outside the seed pool")
+                if fixed_code_indices is not None:
+                    portfolio_size = int(fixed_code_indices.numel())
+                    if torch.unique(fixed_code_indices).numel() != portfolio_size:
+                        raise ValueError("PortfolioStep codes must be distinct")
+                    if torch.any(fixed_code_indices < 0) or torch.any(
+                        fixed_code_indices >= seed_sampler.pool.size(0)
+                    ):
+                        raise ValueError(
+                            "PortfolioStep code index is outside the seed pool"
+                        )
 
             # Verify configuration matches
             assert (
@@ -138,6 +161,7 @@ class Search:
                     "portfolio_enabled": portfolio_enabled,
                     "portfolio_size": portfolio_size,
                     "fixed_code_indices": fixed_code_indices,
+                    "resample_codes_each_step": resample_codes_each_step,
                     **model_config,
                 }
             )
@@ -414,9 +438,14 @@ class Search:
 
         # Sample latent vectors for all augmentations
         if operator["portfolio_enabled"]:
-            z = operator["seed_sampler"].repeat_fixed(
-                operator["fixed_code_indices"], aug_factor, replicas=1
-            )
+            if operator["resample_codes_each_step"]:
+                z = operator["seed_sampler"].sample_shared_panel(
+                    aug_factor, operator["portfolio_size"], replicas=1
+                )
+            else:
+                z = operator["seed_sampler"].repeat_fixed(
+                    operator["fixed_code_indices"], aug_factor, replicas=1
+                )
         else:
             z = operator["seed_sampler"].sample(aug_factor, rollout_size)
 

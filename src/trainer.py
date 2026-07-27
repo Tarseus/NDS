@@ -77,6 +77,9 @@ class Trainer:
         self.bfws_num_codes = int(bfws_params.get("num_codes", 8))
         self.bfws_replicas = 2
         self.bfws_code_seed = int(bfws_params.get("code_seed", 20260726))
+        self.bfws_resample_codes_each_step = bool(
+            bfws_params.get("resample_codes_each_step", False)
+        )
         self.bfws_constraint_enabled = bool(
             bfws_params.get("constraint_enabled", True)
         )
@@ -470,11 +473,7 @@ class Trainer:
 
         state = self.env.reset()
         reset_state = self.env.get_model_input(self.device)
-        codes = self.seed_sampler.repeat_fixed(
-            self.bfws_code_indices,
-            batch_size,
-            replicas=self.bfws_replicas,
-        )
+        codes = self._sample_bfws_codes(batch_size, self.bfws_replicas)
         with torch.amp.autocast(device_type=self.device.type):
             self.model.pre_forward(reset_state, codes)
         step_probs, _ = self._perform_rollout(state)
@@ -569,6 +568,18 @@ class Trainer:
         for code, frequency in enumerate(diagnostics["winner_frequency"]):
             metrics[f"bfws_winner_frequency_{code}"] = frequency.item()
         return metrics
+
+    def _sample_bfws_codes(
+        self, batch_size: int, replicas: int
+    ) -> torch.Tensor:
+        """Return either the persistent panel or one fresh shared panel."""
+        if self.bfws_resample_codes_each_step:
+            return self.seed_sampler.sample_shared_panel(
+                batch_size, self.bfws_num_codes, replicas=replicas
+            )
+        return self.seed_sampler.repeat_fixed(
+            self.bfws_code_indices, batch_size, replicas=replicas
+        )
 
     def _perform_rollout(self, state) -> Tuple[torch.Tensor, torch.Tensor]:
         """Return selected-action probabilities and the first full distribution."""
@@ -772,9 +783,7 @@ class Trainer:
         with torch.no_grad():
             state = self.env.reset()
             reset_state = self.env.get_model_input(self.device)
-            codes = self.seed_sampler.repeat_fixed(
-                self.bfws_code_indices, batch_size, replicas=1
-            )
+            codes = self._sample_bfws_codes(batch_size, replicas=1)
             with torch.amp.autocast(device_type=self.device.type):
                 self.model.pre_forward(reset_state, codes)
             done = False
@@ -955,6 +964,9 @@ class Trainer:
                     "enabled": True,
                     "num_codes": self.bfws_num_codes,
                     "code_indices": self.bfws_code_indices.detach().cpu(),
+                    "resample_codes_each_step": (
+                        self.bfws_resample_codes_each_step
+                    ),
                     "dual": self.bfws_dual.detach().cpu(),
                     "value_ema": (
                         None

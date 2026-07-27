@@ -101,6 +101,22 @@ def test_fixed_code_panel_is_repeated_in_replica_order():
     assert torch.unique(indices).numel() == 3
 
 
+def test_resampled_panel_is_shared_and_repeated_in_replica_order():
+    sampler_path = Path(__file__).parents[1] / "src" / "seed_sampler.py"
+    spec = importlib.util.spec_from_file_location("seed_sampler", sampler_path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    sampler = module.SeedVectorSampler(4, torch.device("cpu"))
+    torch.manual_seed(17)
+    first = sampler.sample_shared_panel(2, num_codes=3, replicas=2)
+    second = sampler.sample_shared_panel(2, num_codes=3, replicas=2)
+    assert first.shape == (2, 6, 4)
+    assert torch.equal(first[0, :3], first[0, 3:])
+    assert torch.equal(first[0], first[1])
+    assert torch.unique(first[0, :3], dim=0).size(0) == 3
+    assert not torch.equal(first, second)
+
+
 def test_k3_score_credit_matches_exact_enumerated_gradient():
     batch_size, replicas, num_codes = 2, 2, 3
     shape = (batch_size, replicas, num_codes)

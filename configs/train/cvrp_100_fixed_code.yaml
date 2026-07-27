@@ -58,6 +58,7 @@ trainer_params:
     enabled: true
     num_codes: 8
     code_seed: 20260726
+    resample_codes_each_step: false
     constraint_enabled: false
     target: 0.0
     dual_init: 0.0
