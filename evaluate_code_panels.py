@@ -17,7 +17,7 @@ from src.validator import Validator
 
 def main(cfg: DictConfig) -> None:
     seed = int(cfg.trainer_params.get("valid_seed", 0))
-    seed_everything(seed)
+    seed_everything(seed, deterministic=True)
     OmegaConf.update(cfg, "env_params.random_seed", seed, force_add=True)
     OmegaConf.update(
         cfg, "trainer_params.valid_greedy_diversity_enable", False, force_add=True
