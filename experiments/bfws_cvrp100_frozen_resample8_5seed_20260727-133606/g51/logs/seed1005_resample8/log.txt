@@ -1,0 +1,214 @@
+[2026-07-27 05:37:18] train_baseline_feasibility.py(29) : Starting reward-only baseline with passive compression and non-committing repeated-tournament diagnostics
+[2026-07-27 05:37:18] train_baseline_feasibility.py(33) : Resolved configuration:
+env_params:
+  problem: cvrp
+  problem_size: 100
+  num_nodes_to_remove: 15
+  iterations_per_instance: 1
+  recreate_n: 5
+  beta: 0
+  insert_in_new_tours_only: true
+  num_processes: 8
+  generator_params:
+    use_X_generator: false
+    rootPos: 2
+    custPos: 2
+    demandType: 2
+    avgRouteSize: 3
+  starting_solution_params:
+    nb_iterations: 50
+    nb_nodes_ratio: 0.15
+model_params:
+  problem: ${env_params.problem}
+  embedding_dim: 128
+  poly_embedding_dim: 256
+  sqrt_embedding_dim: 11.3137
+  encoder_layer_num: 2
+  tour_layer: true
+  message_passing_layer_num: 1
+  encoder_layer_num_2: 2
+  qkv_dim: 16
+  head_num: 8
+  logit_clipping: 10
+  ff_hidden_dim: 512
+  eval_type: softmax
+  z_dim: 10
+optimizer_params:
+  optimizer:
+    lr: 0.0
+    weight_decay: 1.0e-06
+  scheduler:
+    milestones:
+    - 8001
+    - 8051
+    gamma: 0.1
+trainer_params:
+  seed: 1005
+  valid_seed: 91005
+  use_cuda: true
+  cuda_device_num: 0
+  reward_type: i
+  epochs: 25
+  iterations_per_epoch: 64
+  train_batch_size: 64
+  grad_acc_iterations: 1
+  rollout_size: 8
+  dpp_objective:
+    enabled: false
+  bfws:
+    enabled: false
+    num_codes: 8
+    code_seed: 20260726
+    constraint_enabled: false
+    target: 0.0
+    dual_init: 0.0
+    dual_lr: 0.01
+    dual_ema_decay: 0.99
+    dual_max: 10.0
+  nb_skipped_iterations: 0
+  prev_model_path: null
+  model_save_interval: 25
+  model_load:
+    enable: true
+    path: /data1/gushengda/NDS_bfws_full/models/cvrp_100
+    epoch: 2000
+    load_optimizer: false
+  valid_episodes: 100
+  valid_iterations: 20
+  valid_batch_size: 20
+  valid_rollout_size: 8
+  valid_augmentation_enable: false
+  valid_aug_factor: 1
+  valid_data_load:
+    enable: true
+    filename: data/cvrp/vrp100_valid_seed1233.pkl
+logger_params:
+  desc: train_cvrp_100_fixed_code
+  wandb:
+    enable: false
+    project: NDS
+  filepath: /data1/gushengda/NDS_runs_bfws/bfws_cvrp100_frozen_resample8_5seed_20260727-133606/seed1005_resample8
+  filename: log.txt
+
+[2026-07-27 05:37:19] trainer.py(185) : Loaded model from /data1/gushengda/NDS_bfws_full/models/cvrp_100/checkpoint-2000.pt
+[2026-07-27 05:37:19] trainer.py(264) : ================================================================================
+[2026-07-27 05:37:21] trainer.py(817) : Epoch   1  |  Train   64/  64 (100.0%)  |  Reward: 0.7584  |  Loss: 1.3410  |  Improved: 1.000  |  Positive: 0.887  |  DPP:  0.000  |  Sim: 0.000  |  BFWS:  0.000  |  Keff:  0.00  |  Cost:   18.04
+[2026-07-27 05:37:21] trainer.py(838) : Epoch   1  |  Reward: 0.7584  |  Loss: 1.3410  |  Improved: 1.000  |  Positive: 0.887  |  DPP:  0.000  |  Sim: 0.000  |  BFWS:  0.000  |  Keff:  0.00  |  Dual: 0.000  |  Cost:   18.04
+[2026-07-27 05:37:21] baseline_feasibility.py(463) : Feasibility | Ret@64: nan | Margin: 0.2511 | BWS@64: nan | UsefulRepeat: nan | K_eff: nan | Enc/DecProbe/RepairProbe ms: nan/nan/nan
+[2026-07-27 05:37:21] trainer.py(910) : Epoch   1/ 25  |  Elapsed: 0.03m  |  Remain: 0.72m
+[2026-07-27 05:37:21] trainer.py(264) : ================================================================================
+[2026-07-27 05:37:21] trainer.py(838) : Epoch   2  |  Reward: 0.7886  |  Loss: 1.4285  |  Improved: 1.000  |  Positive: 0.871  |  DPP:  0.000  |  Sim: 0.000  |  BFWS:  0.000  |  Keff:  0.00  |  Dual: 0.000  |  Cost:   17.84
+[2026-07-27 05:37:21] baseline_feasibility.py(463) : Feasibility | Ret@64: nan | Margin: 0.2332 | BWS@64: nan | UsefulRepeat: nan | K_eff: nan | Enc/DecProbe/RepairProbe ms: nan/nan/nan
+[2026-07-27 05:37:21] trainer.py(910) : Epoch   2/ 25  |  Elapsed: 0.03m  |  Remain: 0.37m
+[2026-07-27 05:37:21] trainer.py(264) : ================================================================================
+[2026-07-27 05:37:21] trainer.py(838) : Epoch   3  |  Reward: 0.8294  |  Loss: 1.5142  |  Improved: 1.000  |  Positive: 0.855  |  DPP:  0.000  |  Sim: 0.000  |  BFWS:  0.000  |  Keff:  0.00  |  Dual: 0.000  |  Cost:   17.99
+[2026-07-27 05:37:21] baseline_feasibility.py(463) : Feasibility | Ret@64: nan | Margin: 0.2129 | BWS@64: nan | UsefulRepeat: nan | K_eff: nan | Enc/DecProbe/RepairProbe ms: nan/nan/nan
+[2026-07-27 05:37:21] trainer.py(910) : Epoch   3/ 25  |  Elapsed: 0.04m  |  Remain: 0.26m
+[2026-07-27 05:37:22] trainer.py(264) : ================================================================================
+[2026-07-27 05:37:22] trainer.py(838) : Epoch   4  |  Reward: 0.7428  |  Loss: 1.4113  |  Improved: 1.000  |  Positive: 0.875  |  DPP:  0.000  |  Sim: 0.000  |  BFWS:  0.000  |  Keff:  0.00  |  Dual: 0.000  |  Cost:   17.97
+[2026-07-27 05:37:22] baseline_feasibility.py(463) : Feasibility | Ret@64: nan | Margin: 0.2324 | BWS@64: nan | UsefulRepeat: nan | K_eff: nan | Enc/DecProbe/RepairProbe ms: nan/nan/nan
+[2026-07-27 05:37:22] trainer.py(910) : Epoch   4/ 25  |  Elapsed: 0.04m  |  Remain: 0.20m
+[2026-07-27 05:37:22] trainer.py(264) : ================================================================================
+[2026-07-27 05:37:22] trainer.py(838) : Epoch   5  |  Reward: 0.7716  |  Loss: 1.4313  |  Improved: 1.000  |  Positive: 0.865  |  DPP:  0.000  |  Sim: 0.000  |  BFWS:  0.000  |  Keff:  0.00  |  Dual: 0.000  |  Cost:   18.07
+[2026-07-27 05:37:22] baseline_feasibility.py(463) : Feasibility | Ret@64: nan | Margin: 0.2186 | BWS@64: nan | UsefulRepeat: nan | K_eff: nan | Enc/DecProbe/RepairProbe ms: nan/nan/nan
+[2026-07-27 05:37:22] trainer.py(910) : Epoch   5/ 25  |  Elapsed: 0.04m  |  Remain: 0.16m
+[2026-07-27 05:37:22] trainer.py(264) : ================================================================================
+[2026-07-27 05:37:22] trainer.py(838) : Epoch   6  |  Reward: 0.7910  |  Loss: 1.3854  |  Improved: 1.000  |  Positive: 0.898  |  DPP:  0.000  |  Sim: 0.000  |  BFWS:  0.000  |  Keff:  0.00  |  Dual: 0.000  |  Cost:   18.05
+[2026-07-27 05:37:22] baseline_feasibility.py(463) : Feasibility | Ret@64: nan | Margin: 0.2139 | BWS@64: nan | UsefulRepeat: nan | K_eff: nan | Enc/DecProbe/RepairProbe ms: nan/nan/nan
+[2026-07-27 05:37:22] trainer.py(910) : Epoch   6/ 25  |  Elapsed: 0.04m  |  Remain: 0.14m
+[2026-07-27 05:37:22] trainer.py(264) : ================================================================================
+[2026-07-27 05:37:22] trainer.py(838) : Epoch   7  |  Reward: 0.7224  |  Loss: 1.3262  |  Improved: 1.000  |  Positive: 0.850  |  DPP:  0.000  |  Sim: 0.000  |  BFWS:  0.000  |  Keff:  0.00  |  Dual: 0.000  |  Cost:   17.49
+[2026-07-27 05:37:22] baseline_feasibility.py(463) : Feasibility | Ret@64: nan | Margin: 0.2399 | BWS@64: nan | UsefulRepeat: nan | K_eff: nan | Enc/DecProbe/RepairProbe ms: nan/nan/nan
+[2026-07-27 05:37:22] trainer.py(910) : Epoch   7/ 25  |  Elapsed: 0.05m  |  Remain: 0.12m
+[2026-07-27 05:37:22] trainer.py(264) : ================================================================================
+[2026-07-27 05:37:22] trainer.py(838) : Epoch   8  |  Reward: 0.6960  |  Loss: 1.2775  |  Improved: 1.000  |  Positive: 0.887  |  DPP:  0.000  |  Sim: 0.000  |  BFWS:  0.000  |  Keff:  0.00  |  Dual: 0.000  |  Cost:   18.17
+[2026-07-27 05:37:22] baseline_feasibility.py(463) : Feasibility | Ret@64: nan | Margin: 0.2333 | BWS@64: nan | UsefulRepeat: nan | K_eff: nan | Enc/DecProbe/RepairProbe ms: nan/nan/nan
+[2026-07-27 05:37:22] trainer.py(910) : Epoch   8/ 25  |  Elapsed: 0.05m  |  Remain: 0.11m
+[2026-07-27 05:37:22] trainer.py(264) : ================================================================================
+[2026-07-27 05:37:22] trainer.py(838) : Epoch   9  |  Reward: 0.7287  |  Loss: 1.3283  |  Improved: 1.000  |  Positive: 0.852  |  DPP:  0.000  |  Sim: 0.000  |  BFWS:  0.000  |  Keff:  0.00  |  Dual: 0.000  |  Cost:   18.01
+[2026-07-27 05:37:22] baseline_feasibility.py(463) : Feasibility | Ret@64: nan | Margin: 0.2462 | BWS@64: nan | UsefulRepeat: nan | K_eff: nan | Enc/DecProbe/RepairProbe ms: nan/nan/nan
+[2026-07-27 05:37:22] trainer.py(910) : Epoch   9/ 25  |  Elapsed: 0.05m  |  Remain: 0.09m
+[2026-07-27 05:37:23] trainer.py(264) : ================================================================================
+[2026-07-27 05:37:23] trainer.py(838) : Epoch  10  |  Reward: 0.7410  |  Loss: 1.4107  |  Improved: 1.000  |  Positive: 0.861  |  DPP:  0.000  |  Sim: 0.000  |  BFWS:  0.000  |  Keff:  0.00  |  Dual: 0.000  |  Cost:   18.04
+[2026-07-27 05:37:23] baseline_feasibility.py(463) : Feasibility | Ret@64: nan | Margin: 0.2255 | BWS@64: nan | UsefulRepeat: nan | K_eff: nan | Enc/DecProbe/RepairProbe ms: nan/nan/nan
+[2026-07-27 05:37:23] trainer.py(910) : Epoch  10/ 25  |  Elapsed: 0.06m  |  Remain: 0.08m
+[2026-07-27 05:37:23] trainer.py(264) : ================================================================================
+[2026-07-27 05:37:23] trainer.py(838) : Epoch  11  |  Reward: 0.7072  |  Loss: 1.3979  |  Improved: 1.000  |  Positive: 0.834  |  DPP:  0.000  |  Sim: 0.000  |  BFWS:  0.000  |  Keff:  0.00  |  Dual: 0.000  |  Cost:   17.75
+[2026-07-27 05:37:23] baseline_feasibility.py(463) : Feasibility | Ret@64: nan | Margin: 0.2132 | BWS@64: nan | UsefulRepeat: nan | K_eff: nan | Enc/DecProbe/RepairProbe ms: nan/nan/nan
+[2026-07-27 05:37:23] trainer.py(910) : Epoch  11/ 25  |  Elapsed: 0.06m  |  Remain: 0.07m
+[2026-07-27 05:37:23] trainer.py(264) : ================================================================================
+[2026-07-27 05:37:23] trainer.py(838) : Epoch  12  |  Reward: 0.7303  |  Loss: 1.3645  |  Improved: 1.000  |  Positive: 0.842  |  DPP:  0.000  |  Sim: 0.000  |  BFWS:  0.000  |  Keff:  0.00  |  Dual: 0.000  |  Cost:   17.79
+[2026-07-27 05:37:23] baseline_feasibility.py(463) : Feasibility | Ret@64: nan | Margin: 0.2559 | BWS@64: nan | UsefulRepeat: nan | K_eff: nan | Enc/DecProbe/RepairProbe ms: nan/nan/nan
+[2026-07-27 05:37:23] trainer.py(910) : Epoch  12/ 25  |  Elapsed: 0.06m  |  Remain: 0.07m
+[2026-07-27 05:37:23] trainer.py(264) : ================================================================================
+[2026-07-27 05:37:23] trainer.py(838) : Epoch  13  |  Reward: 0.7059  |  Loss: 1.2695  |  Improved: 1.000  |  Positive: 0.838  |  DPP:  0.000  |  Sim: 0.000  |  BFWS:  0.000  |  Keff:  0.00  |  Dual: 0.000  |  Cost:   17.76
+[2026-07-27 05:37:23] baseline_feasibility.py(463) : Feasibility | Ret@64: nan | Margin: 0.2095 | BWS@64: nan | UsefulRepeat: nan | K_eff: nan | Enc/DecProbe/RepairProbe ms: nan/nan/nan
+[2026-07-27 05:37:23] trainer.py(910) : Epoch  13/ 25  |  Elapsed: 0.06m  |  Remain: 0.06m
+[2026-07-27 05:37:23] trainer.py(264) : ================================================================================
+[2026-07-27 05:37:23] trainer.py(838) : Epoch  14  |  Reward: 0.7531  |  Loss: 1.4891  |  Improved: 1.000  |  Positive: 0.826  |  DPP:  0.000  |  Sim: 0.000  |  BFWS:  0.000  |  Keff:  0.00  |  Dual: 0.000  |  Cost:   17.73
+[2026-07-27 05:37:23] baseline_feasibility.py(463) : Feasibility | Ret@64: nan | Margin: 0.2138 | BWS@64: nan | UsefulRepeat: nan | K_eff: nan | Enc/DecProbe/RepairProbe ms: nan/nan/nan
+[2026-07-27 05:37:23] trainer.py(910) : Epoch  14/ 25  |  Elapsed: 0.07m  |  Remain: 0.05m
+[2026-07-27 05:37:23] trainer.py(264) : ================================================================================
+[2026-07-27 05:37:24] trainer.py(838) : Epoch  15  |  Reward: 0.8035  |  Loss: 1.3977  |  Improved: 1.000  |  Positive: 0.861  |  DPP:  0.000  |  Sim: 0.000  |  BFWS:  0.000  |  Keff:  0.00  |  Dual: 0.000  |  Cost:   18.18
+[2026-07-27 05:37:24] baseline_feasibility.py(463) : Feasibility | Ret@64: nan | Margin: 0.1992 | BWS@64: nan | UsefulRepeat: nan | K_eff: nan | Enc/DecProbe/RepairProbe ms: nan/nan/nan
+[2026-07-27 05:37:24] trainer.py(910) : Epoch  15/ 25  |  Elapsed: 0.07m  |  Remain: 0.05m
+[2026-07-27 05:37:24] trainer.py(264) : ================================================================================
+[2026-07-27 05:37:24] trainer.py(838) : Epoch  16  |  Reward: 0.6839  |  Loss: 1.2574  |  Improved: 1.000  |  Positive: 0.861  |  DPP:  0.000  |  Sim: 0.000  |  BFWS:  0.000  |  Keff:  0.00  |  Dual: 0.000  |  Cost:   17.70
+[2026-07-27 05:37:24] baseline_feasibility.py(463) : Feasibility | Ret@64: nan | Margin: 0.2497 | BWS@64: nan | UsefulRepeat: nan | K_eff: nan | Enc/DecProbe/RepairProbe ms: nan/nan/nan
+[2026-07-27 05:37:24] trainer.py(910) : Epoch  16/ 25  |  Elapsed: 0.07m  |  Remain: 0.04m
+[2026-07-27 05:37:24] trainer.py(264) : ================================================================================
+[2026-07-27 05:37:24] trainer.py(838) : Epoch  17  |  Reward: 0.7634  |  Loss: 1.3926  |  Improved: 1.000  |  Positive: 0.859  |  DPP:  0.000  |  Sim: 0.000  |  BFWS:  0.000  |  Keff:  0.00  |  Dual: 0.000  |  Cost:   17.82
+[2026-07-27 05:37:24] baseline_feasibility.py(463) : Feasibility | Ret@64: nan | Margin: 0.2217 | BWS@64: nan | UsefulRepeat: nan | K_eff: nan | Enc/DecProbe/RepairProbe ms: nan/nan/nan
+[2026-07-27 05:37:24] trainer.py(910) : Epoch  17/ 25  |  Elapsed: 0.08m  |  Remain: 0.04m
+[2026-07-27 05:37:24] trainer.py(264) : ================================================================================
+[2026-07-27 05:37:24] trainer.py(838) : Epoch  18  |  Reward: 0.6967  |  Loss: 1.2886  |  Improved: 1.000  |  Positive: 0.867  |  DPP:  0.000  |  Sim: 0.000  |  BFWS:  0.000  |  Keff:  0.00  |  Dual: 0.000  |  Cost:   18.11
+[2026-07-27 05:37:24] baseline_feasibility.py(463) : Feasibility | Ret@64: nan | Margin: 0.2399 | BWS@64: nan | UsefulRepeat: nan | K_eff: nan | Enc/DecProbe/RepairProbe ms: nan/nan/nan
+[2026-07-27 05:37:24] trainer.py(910) : Epoch  18/ 25  |  Elapsed: 0.08m  |  Remain: 0.03m
+[2026-07-27 05:37:24] trainer.py(264) : ================================================================================
+[2026-07-27 05:37:24] trainer.py(838) : Epoch  19  |  Reward: 0.7173  |  Loss: 1.2768  |  Improved: 1.000  |  Positive: 0.857  |  DPP:  0.000  |  Sim: 0.000  |  BFWS:  0.000  |  Keff:  0.00  |  Dual: 0.000  |  Cost:   17.86
+[2026-07-27 05:37:24] baseline_feasibility.py(463) : Feasibility | Ret@64: nan | Margin: 0.2499 | BWS@64: nan | UsefulRepeat: nan | K_eff: nan | Enc/DecProbe/RepairProbe ms: nan/nan/nan
+[2026-07-27 05:37:24] trainer.py(910) : Epoch  19/ 25  |  Elapsed: 0.08m  |  Remain: 0.03m
+[2026-07-27 05:37:24] trainer.py(264) : ================================================================================
+[2026-07-27 05:37:25] trainer.py(838) : Epoch  20  |  Reward: 0.7161  |  Loss: 1.3288  |  Improved: 1.000  |  Positive: 0.854  |  DPP:  0.000  |  Sim: 0.000  |  BFWS:  0.000  |  Keff:  0.00  |  Dual: 0.000  |  Cost:   18.06
+[2026-07-27 05:37:25] baseline_feasibility.py(463) : Feasibility | Ret@64: nan | Margin: 0.2361 | BWS@64: nan | UsefulRepeat: nan | K_eff: nan | Enc/DecProbe/RepairProbe ms: nan/nan/nan
+[2026-07-27 05:37:25] trainer.py(910) : Epoch  20/ 25  |  Elapsed: 0.09m  |  Remain: 0.02m
+[2026-07-27 05:37:25] trainer.py(264) : ================================================================================
+[2026-07-27 05:37:25] trainer.py(838) : Epoch  21  |  Reward: 0.7722  |  Loss: 1.4237  |  Improved: 1.000  |  Positive: 0.854  |  DPP:  0.000  |  Sim: 0.000  |  BFWS:  0.000  |  Keff:  0.00  |  Dual: 0.000  |  Cost:   17.67
+[2026-07-27 05:37:25] baseline_feasibility.py(463) : Feasibility | Ret@64: nan | Margin: 0.2368 | BWS@64: nan | UsefulRepeat: nan | K_eff: nan | Enc/DecProbe/RepairProbe ms: nan/nan/nan
+[2026-07-27 05:37:25] trainer.py(910) : Epoch  21/ 25  |  Elapsed: 0.09m  |  Remain: 0.02m
+[2026-07-27 05:37:25] trainer.py(264) : ================================================================================
+[2026-07-27 05:37:25] trainer.py(838) : Epoch  22  |  Reward: 0.7462  |  Loss: 1.3647  |  Improved: 1.000  |  Positive: 0.842  |  DPP:  0.000  |  Sim: 0.000  |  BFWS:  0.000  |  Keff:  0.00  |  Dual: 0.000  |  Cost:   17.80
+[2026-07-27 05:37:25] baseline_feasibility.py(463) : Feasibility | Ret@64: nan | Margin: 0.2047 | BWS@64: nan | UsefulRepeat: nan | K_eff: nan | Enc/DecProbe/RepairProbe ms: nan/nan/nan
+[2026-07-27 05:37:25] trainer.py(910) : Epoch  22/ 25  |  Elapsed: 0.10m  |  Remain: 0.01m
+[2026-07-27 05:37:25] trainer.py(264) : ================================================================================
+[2026-07-27 05:37:25] trainer.py(838) : Epoch  23  |  Reward: 0.7358  |  Loss: 1.3865  |  Improved: 1.000  |  Positive: 0.871  |  DPP:  0.000  |  Sim: 0.000  |  BFWS:  0.000  |  Keff:  0.00  |  Dual: 0.000  |  Cost:   17.94
+[2026-07-27 05:37:25] baseline_feasibility.py(463) : Feasibility | Ret@64: nan | Margin: 0.2659 | BWS@64: nan | UsefulRepeat: nan | K_eff: nan | Enc/DecProbe/RepairProbe ms: nan/nan/nan
+[2026-07-27 05:37:25] trainer.py(910) : Epoch  23/ 25  |  Elapsed: 0.10m  |  Remain: 0.01m
+[2026-07-27 05:37:25] trainer.py(264) : ================================================================================
+[2026-07-27 05:37:25] trainer.py(838) : Epoch  24  |  Reward: 0.7406  |  Loss: 1.3791  |  Improved: 1.000  |  Positive: 0.846  |  DPP:  0.000  |  Sim: 0.000  |  BFWS:  0.000  |  Keff:  0.00  |  Dual: 0.000  |  Cost:   17.77
+[2026-07-27 05:37:25] baseline_feasibility.py(463) : Feasibility | Ret@64: nan | Margin: 0.2178 | BWS@64: nan | UsefulRepeat: nan | K_eff: nan | Enc/DecProbe/RepairProbe ms: nan/nan/nan
+[2026-07-27 05:37:25] trainer.py(910) : Epoch  24/ 25  |  Elapsed: 0.10m  |  Remain: 0.00m
+[2026-07-27 05:37:26] trainer.py(264) : ================================================================================
+[2026-07-27 05:37:26] trainer.py(838) : Epoch  25  |  Reward: 0.7066  |  Loss: 1.2914  |  Improved: 1.000  |  Positive: 0.846  |  DPP:  0.000  |  Sim: 0.000  |  BFWS:  0.000  |  Keff:  0.00  |  Dual: 0.000  |  Cost:   17.41
+[2026-07-27 05:37:26] baseline_feasibility.py(463) : Feasibility | Ret@64: nan | Margin: 0.2425 | BWS@64: nan | UsefulRepeat: nan | K_eff: nan | Enc/DecProbe/RepairProbe ms: nan/nan/nan
+[2026-07-27 05:37:26] trainer.py(910) : Epoch  25/ 25  |  Elapsed: 0.11m  |  Remain: 0.00m
+[2026-07-27 05:37:26] trainer.py(921) : Saving checkpoint
+[2026-07-27 05:37:26] validator.py(94) : ================================================================================
+[2026-07-27 05:37:26] validator.py(95) : Validation
+[2026-07-27 05:37:26] validator.py(96) : ================================================================================
+[2026-07-27 05:37:27] validator.py(402) : Episode  20/100  |  Elapsed: 0.02m  |  Remain: 0.09m  |  Score:   15.90  |  Aug Score:   15.90
+[2026-07-27 05:37:28] validator.py(402) : Episode  40/100  |  Elapsed: 0.03m  |  Remain: 0.05m  |  Score:   15.67  |  Aug Score:   15.67
+[2026-07-27 05:37:28] validator.py(402) : Episode  60/100  |  Elapsed: 0.04m  |  Remain: 0.03m  |  Score:   16.10  |  Aug Score:   16.10
+[2026-07-27 05:37:29] validator.py(402) : Episode  80/100  |  Elapsed: 0.05m  |  Remain: 0.01m  |  Score:   16.00  |  Aug Score:   16.00
+[2026-07-27 05:37:29] validator.py(402) : Episode 100/100  |  Elapsed: 0.05m  |  Remain: 0.00m  |  Score:   16.25  |  Aug Score:   16.25
+[2026-07-27 05:37:29] validator.py(410) : ================================================================================
+[2026-07-27 05:37:29] validator.py(411) : Validation Complete
+[2026-07-27 05:37:29] validator.py(412) : ================================================================================
+[2026-07-27 05:37:29] validator.py(413) : No-Aug Score:     16.254
+[2026-07-27 05:37:29] validator.py(414) : Aug Score:        16.254
+[2026-07-27 05:37:29] validator.py(415) : Diversity Score:  0.2525
+[2026-07-27 05:37:29] validator.py(416) : Unique Rollouts:  1.0000
+[2026-07-27 05:37:29] validator.py(427) : ================================================================================
+[2026-07-27 05:37:29] trainer.py(282) : ================================================================================
+[2026-07-27 05:37:29] trainer.py(283) : Training Complete
+[2026-07-27 05:37:29] trainer.py(284) : ================================================================================
