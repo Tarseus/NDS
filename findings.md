@@ -10,7 +10,8 @@ The broad cross-distribution objective is established in prior neural routing wo
 
 ## Key Results
 
-No experimental result yet.
+- The end-to-end CPU smoke test completed across all six planned distributions and produced the expected raw utility tensor, manifest and analysis report.
+- The smoke sample is too small for a scientific conclusion and is not used to accept or reject H0/H1.
 
 ## Patterns and Insights
 
@@ -23,6 +24,7 @@ No experimental result yet.
 - The local Python installation is CPU-only; GPU experiments should run in a clean remote clone.
 - The original working tree is dirty in core model/trainer files and must not be used as the source boundary for this experiment.
 - One-step reward is a screening proxy, not evidence of improved full LNS anytime performance.
+- Local cppimport compilation requires running outside the restricted Windows sandbox because the compiler creates nested temporary build directories.
 
 ## Open Questions
 
@@ -33,4 +35,3 @@ No experimental result yet.
 ## Optimization Trajectory
 
 No runs completed.
-

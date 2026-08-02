@@ -58,8 +58,15 @@ experiments:
   proxy_metric: "Relative gain in normalized one-step reward of source-selected or kNN-retrieved codes over a random-code baseline, with bootstrap confidence intervals; secondary metrics are split-half code-rank reliability and negative-transfer rate."
   baseline_value: null
   best_value: null
-  total_runs: 0
-  trajectory: []
+  total_runs: 1
+  trajectory:
+    - run_id: "smoke_cpu_001"
+      hypothesis: "H0/H1 pipeline"
+      metric_value: null
+      delta: null
+      wall_time_min: 0.35
+      change_summary: "Non-inferential 2-instance end-to-end smoke across six distributions."
+      timestamp: "2026-08-02"
 
 outer_loop:
   cycle: 0
@@ -73,4 +80,3 @@ workspace:
   experiments_dir: "experiments/"
   to_human_dir: "to_human/"
   paper_dir: "paper/"
-
