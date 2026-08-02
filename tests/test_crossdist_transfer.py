@@ -4,8 +4,10 @@ import torch
 from src.crossdist_transfer import (
     FEATURE_NAMES,
     build_code_major_panel,
+    choose_multisource_mean_code,
     extract_instance_features,
     nearest_source_codes,
+    multisource_knn_codes,
     reshape_code_replicas,
     spearman_correlation,
     split_half_reliability,
@@ -70,4 +72,31 @@ def test_nearest_source_reuses_source_best_code():
     np.testing.assert_array_equal(
         nearest_source_codes(source_features, source_utility, target_features),
         [0, 1],
+    )
+
+
+def test_multisource_mean_code_excludes_target_distribution():
+    utility = np.asarray(
+        [
+            [[9.0, 0.0], [9.0, 0.0]],
+            [[0.0, 4.0], [0.0, 4.0]],
+            [[0.0, 6.0], [0.0, 6.0]],
+        ]
+    )
+    assert choose_multisource_mean_code(utility, 0, 2) == 1
+    assert choose_multisource_mean_code(utility, 2, 2) == 0
+
+
+def test_multisource_knn_averages_neighbour_utilities():
+    source_features = np.asarray([[0.0], [0.2], [10.0]])
+    source_utility = np.asarray([[5.0, 0.0], [0.0, 9.0], [8.0, 0.0]])
+    target_features = np.asarray([[0.1], [9.9]])
+    np.testing.assert_array_equal(
+        multisource_knn_codes(
+            source_features,
+            source_utility,
+            target_features,
+            neighbours=2,
+        ),
+        [1, 1],
     )

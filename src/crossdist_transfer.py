@@ -277,6 +277,63 @@ def choose_global_code(calibration_utility: np.ndarray) -> int:
     return int(calibration_utility.mean(axis=0).argmax())
 
 
+def choose_multisource_mean_code(
+    utility: np.ndarray,
+    held_out_distribution: int,
+    calibration_instances: int,
+) -> int:
+    """Choose a code using equal-weight means from all non-target sources."""
+    utility = np.asarray(utility, dtype=np.float64)
+    if utility.ndim != 3:
+        raise ValueError("utility must have shape (distributions, instances, codes)")
+    distributions, instances, _ = utility.shape
+    if not 0 <= held_out_distribution < distributions:
+        raise ValueError("held_out_distribution is outside the utility tensor")
+    if distributions < 2:
+        raise ValueError("at least two distributions are required")
+    if not 1 <= calibration_instances <= instances:
+        raise ValueError("calibration_instances must lie within each distribution")
+    source_mask = np.arange(distributions) != held_out_distribution
+    source_means = utility[source_mask, :calibration_instances].mean(axis=1)
+    return int(source_means.mean(axis=0).argmax())
+
+
+def multisource_knn_codes(
+    source_features: np.ndarray,
+    source_utility: np.ndarray,
+    target_features: np.ndarray,
+    neighbours: int = 5,
+) -> np.ndarray:
+    """Select a code from the mean utility of feature-nearest source rows."""
+    source_features = np.asarray(source_features, dtype=np.float64)
+    source_utility = np.asarray(source_utility, dtype=np.float64)
+    target_features = np.asarray(target_features, dtype=np.float64)
+    if source_features.ndim != 2 or target_features.ndim != 2:
+        raise ValueError("features must be matrices")
+    if source_features.shape[1] != target_features.shape[1]:
+        raise ValueError("source and target features must share a dimension")
+    if source_utility.ndim != 2:
+        raise ValueError("source_utility must be a matrix")
+    if source_utility.shape[0] != source_features.shape[0]:
+        raise ValueError("source utilities and features must align")
+    if not 1 <= neighbours <= source_features.shape[0]:
+        raise ValueError("neighbours must lie within the source memory size")
+
+    mean = source_features.mean(axis=0)
+    scale = source_features.std(axis=0)
+    scale[scale < 1e-8] = 1.0
+    source_scaled = (source_features - mean) / scale
+    target_scaled = (target_features - mean) / scale
+    squared_distance = (
+        (target_scaled[:, None, :] - source_scaled[None, :, :]) ** 2
+    ).sum(axis=2)
+    nearest = np.argpartition(
+        squared_distance, neighbours - 1, axis=1
+    )[:, :neighbours]
+    neighbour_utility = source_utility[nearest].mean(axis=1)
+    return neighbour_utility.argmax(axis=1)
+
+
 def nearest_source_codes(
     source_features: np.ndarray,
     source_utility: np.ndarray,
@@ -328,4 +385,3 @@ def distribution_slices(
         )
         for index, name in enumerate(names)
     }
-
