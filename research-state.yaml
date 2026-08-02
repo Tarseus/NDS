@@ -1,0 +1,76 @@
+project:
+  title: "Automatic Cross-Distribution Adaptation for Neural LNS"
+  question: "Can a frozen seed-conditioned NDS reuse latent-code experience across same-size CVRP instances and unseen distributions to reduce search budget?"
+  status: active
+  started: "2026-08-02"
+  domain: "neural combinatorial optimization / learned large-neighborhood search"
+
+literature:
+  key_papers:
+    - id: nds2025
+      title: "Neural Deconstruction Search for Vehicle Routing Problems"
+      authors: "Hottung, Wong-Chung, Tierney"
+      year: 2025
+      relevance: "Backbone learned LNS; reports mild CVRP500 cross-distribution robustness."
+    - id: compass2023
+      title: "Combinatorial Optimization with Policy Adaptation using Latent Space Search"
+      authors: "Chalumeau et al."
+      year: 2023
+      relevance: "Closest per-instance latent policy search baseline."
+    - id: omnivrp2023
+      title: "Towards Omni-generalizable Neural Methods for Vehicle Routing Problems"
+      authors: "Zhou et al."
+      year: 2023
+      relevance: "Meta-learning baseline for fast cross-size and cross-distribution adaptation."
+    - id: memento2024
+      title: "Memory-Enhanced Neural Solvers for Efficient Adaptation in Combinatorial Optimization"
+      authors: "Chalumeau et al."
+      year: 2024
+      relevance: "Memory-based inference-time adaptation baseline."
+  open_problems:
+    - "Reuse adaptation/search state across different instances instead of restarting latent search."
+    - "Detect and reject negative transfer under an unknown distribution shift."
+  evidence_gaps:
+    - "Whether the existing NDS latent codes have stable performance semantics across instances."
+    - "Whether ordinary instance features predict code transfer before Fisher geometry is introduced."
+
+hypotheses:
+  - id: H0
+    statement: "The pretrained NDS binary latent codes have no sufficiently reliable cross-instance performance ordering; apparent transfer is dominated by rollout noise."
+    status: active
+    motivation: "If H0 cannot be rejected, transport geometry has no stable object to move."
+    parent: null
+    priority: high
+  - id: H1
+    statement: "A code selected from a feature-nearest source instance improves normalized one-step destroy-repair reward on unseen same-size target distributions relative to a random code."
+    status: pending
+    motivation: "This is the minimum evidence that adaptation experience is reusable across instances."
+    parent: null
+    priority: high
+  - id: H2
+    statement: "Fisher-derived similarity predicts transfer regret beyond ordinary instance features and encoder embeddings."
+    status: pending
+    motivation: "Only test geometry after H0 is rejected and H1 has positive signal."
+    parent: null
+    priority: medium
+
+experiments:
+  proxy_metric: "Relative gain in normalized one-step reward of source-selected or kNN-retrieved codes over a random-code baseline, with bootstrap confidence intervals; secondary metrics are split-half code-rank reliability and negative-transfer rate."
+  baseline_value: null
+  best_value: null
+  total_runs: 0
+  trajectory: []
+
+outer_loop:
+  cycle: 0
+  last_direction: null
+  last_reflection: ""
+
+workspace:
+  findings: "findings.md"
+  log: "research-log.md"
+  literature_dir: "literature/"
+  experiments_dir: "experiments/"
+  to_human_dir: "to_human/"
+  paper_dir: "paper/"
+
