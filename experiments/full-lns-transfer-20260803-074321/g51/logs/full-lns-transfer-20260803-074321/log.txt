@@ -1,0 +1,99 @@
+[1/6][1/4] uniform random_fixed
+[1/6][2/4] uniform multisource_fixed
+[1/6][3/4] uniform random_panel
+[1/6][4/4] uniform uniform_fixed
+[2/6][1/4] x_uniform_center random_fixed
+[2/6][2/4] x_uniform_center multisource_fixed
+[2/6][3/4] x_uniform_center random_panel
+[2/6][4/4] x_uniform_center uniform_fixed
+[3/6][1/4] x_cluster_center random_fixed
+[3/6][2/4] x_cluster_center multisource_fixed
+[3/6][3/4] x_cluster_center random_panel
+[3/6][4/4] x_cluster_center uniform_fixed
+[4/6][1/4] x_mixed_center random_fixed
+[4/6][2/4] x_mixed_center multisource_fixed
+[4/6][3/4] x_mixed_center random_panel
+[4/6][4/4] x_mixed_center uniform_fixed
+[5/6][1/4] x_cluster_corner_quad random_fixed
+[5/6][2/4] x_cluster_corner_quad multisource_fixed
+[5/6][3/4] x_cluster_corner_quad random_panel
+[5/6][4/4] x_cluster_corner_quad uniform_fixed
+[6/6][1/4] x_mixed_random_fewlarge random_fixed
+[6/6][2/4] x_mixed_random_fewlarge multisource_fixed
+[6/6][3/4] x_mixed_random_fewlarge random_panel
+[6/6][4/4] x_mixed_random_fewlarge uniform_fixed
+{
+  "checkpoint": "models/cvrp_100/checkpoint-2000.pt",
+  "checkpoint_epoch": 2000,
+  "device": "cuda:0",
+  "instances_per_distribution": 24,
+  "iterations": 200,
+  "rollout_size": 32,
+  "instance_seed": 20260806,
+  "random_code_seed": 20260807,
+  "code_seed": 20260803,
+  "checkpoints": [
+    0,
+    1,
+    2,
+    5,
+    10,
+    20,
+    50,
+    100,
+    200
+  ],
+  "strategies": [
+    "random_fixed",
+    "multisource_fixed",
+    "random_panel",
+    "uniform_fixed"
+  ],
+  "multisource_codes": {
+    "uniform": 959,
+    "x_uniform_center": 175,
+    "x_cluster_center": 175,
+    "x_mixed_center": 175,
+    "x_cluster_corner_quad": 959,
+    "x_mixed_random_fewlarge": 175
+  },
+  "uniform_code": 910,
+  "wall_time_seconds": [
+    [
+      4.5960213877260685,
+      4.579454179853201,
+      4.428926439024508,
+      4.42831355240196
+    ],
+    [
+      4.360482266172767,
+      4.646766362711787,
+      4.407877516001463,
+      4.4446483151987195
+    ],
+    [
+      4.4683640245348215,
+      4.39875478670001,
+      4.477039926685393,
+      4.506372245028615
+    ],
+    [
+      4.355900620110333,
+      4.420657604932785,
+      4.459026435390115,
+      4.498388799838722
+    ],
+    [
+      4.4523131204769015,
+      4.448531989939511,
+      4.454672776162624,
+      4.456496644765139
+    ],
+    [
+      4.509010897018015,
+      4.538242738693953,
+      4.495497760362923,
+      4.513828488998115
+    ]
+  ]
+}
