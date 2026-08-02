@@ -232,7 +232,7 @@ def main() -> None:
         (len(names), len(strategies), args.instances, len(checkpoints)),
         dtype=np.float64,
     )
-    wall_times = np.empty((len(names), len(STRATEGIES)), dtype=np.float64)
+    wall_times = np.empty((len(names), len(strategies)), dtype=np.float64)
     for distribution_index, (name, parameters) in enumerate(
         CVRP100_DISTRIBUTIONS.items()
     ):
