@@ -22,11 +22,16 @@ from src.reproducibility import seed_everything
 from src.seed_sampler import SeedVectorSampler
 
 
-STRATEGIES = (
+SINGLE_CODE_STRATEGIES = (
     "random_fixed",
     "multisource_fixed",
     "random_panel",
     "uniform_fixed",
+)
+TOP8_STRATEGIES = (
+    "random_fixed",
+    "multisource_top8",
+    "random_panel",
 )
 MULTISOURCE_CODES = {
     "uniform": 959,
@@ -37,6 +42,14 @@ MULTISOURCE_CODES = {
     "x_mixed_random_fewlarge": 175,
 }
 UNIFORM_CODE = 910
+MULTISOURCE_TOP8_CODES = {
+    "uniform": [959, 175, 955, 303, 267, 910, 762, 489],
+    "x_uniform_center": [175, 959, 955, 303, 267, 910, 762, 489],
+    "x_cluster_center": [175, 959, 303, 955, 910, 762, 267, 489],
+    "x_mixed_center": [175, 959, 910, 955, 303, 489, 267, 762],
+    "x_cluster_corner_quad": [959, 910, 175, 303, 955, 267, 762, 313],
+    "x_mixed_random_fewlarge": [175, 959, 955, 303, 910, 267, 762, 489],
+}
 
 
 def _rollout(model: Model, env: Env, softmax_temp: float) -> np.ndarray:
@@ -71,6 +84,13 @@ def _strategy_codes(
             device=sampler.device,
         )
         return sampler.repeat_fixed(index, batch_size, replicas=rollout_size)
+    if strategy == "multisource_top8":
+        index = torch.as_tensor(
+            MULTISOURCE_TOP8_CODES[distribution_name],
+            dtype=torch.long,
+            device=sampler.device,
+        )
+        return sampler.repeat_fixed(index, batch_size, replicas=4)
     if strategy == "random_panel":
         index = torch.as_tensor(
             panel_indices, dtype=torch.long, device=sampler.device
@@ -164,6 +184,9 @@ def main() -> None:
     parser.add_argument("--random-code-seed", type=int, default=20260807)
     parser.add_argument("--code-seed", type=int, default=20260803)
     parser.add_argument("--num-processes", type=int, default=8)
+    parser.add_argument(
+        "--mode", choices=("single", "top8"), default="single"
+    )
     args = parser.parse_args()
 
     if args.rollout_size != 32:
@@ -184,6 +207,17 @@ def main() -> None:
         sampler.pool.shape[0], args.rollout_size, args.code_seed
     )
     names = list(CVRP100_DISTRIBUTIONS)
+    strategies = (
+        SINGLE_CODE_STRATEGIES if args.mode == "single" else TOP8_STRATEGIES
+    )
+    if args.mode == "top8":
+        panel_set = set(int(value) for value in panel_indices)
+        for name in names:
+            codes = MULTISOURCE_TOP8_CODES[name]
+            if len(codes) != 8 or len(set(codes)) != 8:
+                raise ValueError(f"invalid top-8 portfolio for {name}")
+            if not set(codes).issubset(panel_set):
+                raise ValueError(f"top-8 portfolio leaves fixed panel for {name}")
     assignments = random_fixed_assignments(
         panel_indices,
         len(names),
@@ -195,7 +229,7 @@ def main() -> None:
         raise ValueError("the locked protocol requires 200 iterations")
 
     all_traces = np.empty(
-        (len(names), len(STRATEGIES), args.instances, len(checkpoints)),
+        (len(names), len(strategies), args.instances, len(checkpoints)),
         dtype=np.float64,
     )
     wall_times = np.empty((len(names), len(STRATEGIES)), dtype=np.float64)
@@ -203,9 +237,10 @@ def main() -> None:
         CVRP100_DISTRIBUTIONS.items()
     ):
         reference_initial = None
-        for strategy_index, strategy in enumerate(STRATEGIES):
+        for strategy_index, strategy in enumerate(strategies):
             print(
-                f"[{distribution_index + 1}/6][{strategy_index + 1}/4] "
+                f"[{distribution_index + 1}/6]"
+                f"[{strategy_index + 1}/{len(strategies)}] "
                 f"{name} {strategy}",
                 flush=True,
             )
@@ -237,7 +272,7 @@ def main() -> None:
     np.savez_compressed(
         args.output / "raw_full_lns.npz",
         distribution_names=np.asarray(names),
-        strategy_names=np.asarray(STRATEGIES),
+        strategy_names=np.asarray(strategies),
         checkpoints=checkpoints,
         best_cost=all_traces,
         wall_time_seconds=wall_times,
@@ -255,9 +290,11 @@ def main() -> None:
         "random_code_seed": args.random_code_seed,
         "code_seed": args.code_seed,
         "checkpoints": checkpoints.tolist(),
-        "strategies": list(STRATEGIES),
+        "mode": args.mode,
+        "strategies": list(strategies),
         "multisource_codes": MULTISOURCE_CODES,
         "uniform_code": UNIFORM_CODE,
+        "multisource_top8_codes": MULTISOURCE_TOP8_CODES,
         "wall_time_seconds": wall_times.tolist(),
     }
     (args.output / "manifest.json").write_text(
