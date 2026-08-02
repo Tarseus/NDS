@@ -1,0 +1,6 @@
+source_commit=7e0b8e8a7ffc74825377dcc58fc7596363cac50f
+host=ubuntu
+gpu=3
+started_at=2026-08-02T23:32:36+00:00
+command=run_crossdist_code_transfer.py --instances 64 --num-codes 32 --replicas 4 --seed 20260804
+finished_at=2026-08-02T23:32:46+00:00

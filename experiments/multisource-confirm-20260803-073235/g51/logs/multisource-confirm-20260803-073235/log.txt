@@ -1,0 +1,95 @@
+[1/6] uniform
+[2/6] x_uniform_center
+[3/6] x_cluster_center
+[4/6] x_mixed_center
+[5/6] x_cluster_corner_quad
+[6/6] x_mixed_random_fewlarge
+{
+  "checkpoint": "models/cvrp_100/checkpoint-2000.pt",
+  "checkpoint_epoch": 2000,
+  "device": "cuda:0",
+  "instances_per_distribution": 64,
+  "num_codes": 32,
+  "replicas": 4,
+  "seed": 20260804,
+  "code_seed": 20260803,
+  "code_indices": [
+    965,
+    977,
+    24,
+    959,
+    201,
+    252,
+    489,
+    182,
+    910,
+    313,
+    226,
+    175,
+    385,
+    803,
+    748,
+    704,
+    642,
+    955,
+    267,
+    742,
+    183,
+    434,
+    527,
+    551,
+    549,
+    107,
+    276,
+    762,
+    653,
+    100,
+    789,
+    303
+  ],
+  "distributions": {
+    "uniform": {
+      "use_X_generator": false,
+      "rootPos": 2,
+      "custPos": 1,
+      "demandType": 2,
+      "avgRouteSize": 3
+    },
+    "x_uniform_center": {
+      "use_X_generator": true,
+      "rootPos": 2,
+      "custPos": 1,
+      "demandType": 2,
+      "avgRouteSize": 3
+    },
+    "x_cluster_center": {
+      "use_X_generator": true,
+      "rootPos": 2,
+      "custPos": 2,
+      "demandType": 2,
+      "avgRouteSize": 3
+    },
+    "x_mixed_center": {
+      "use_X_generator": true,
+      "rootPos": 2,
+      "custPos": 3,
+      "demandType": 2,
+      "avgRouteSize": 3
+    },
+    "x_cluster_corner_quad": {
+      "use_X_generator": true,
+      "rootPos": 3,
+      "custPos": 2,
+      "demandType": 6,
+      "avgRouteSize": 3
+    },
+    "x_mixed_random_fewlarge": {
+      "use_X_generator": true,
+      "rootPos": 1,
+      "custPos": 3,
+      "demandType": 7,
+      "avgRouteSize": 2
+    }
+  },
+  "wall_time_seconds": 3.3107762122526765
+}
