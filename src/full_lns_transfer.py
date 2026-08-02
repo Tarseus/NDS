@@ -69,4 +69,6 @@ def normalized_anytime_auc(
         raise ValueError("checkpoint axis and costs disagree")
     axis = np.log1p(checkpoints)
     axis /= axis[-1]
-    return np.trapezoid(curve, axis, axis=1)
+    widths = np.diff(axis)
+    trapezoids = 0.5 * (curve[:, :-1] + curve[:, 1:]) * widths[None, :]
+    return trapezoids.sum(axis=1)
