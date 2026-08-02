@@ -1,0 +1,7 @@
+Traceback (most recent call last):
+  File "/data1/gushengda/NDS_crossdist/run_full_lns_transfer.py", line 307, in <module>
+    main()
+  File "/data1/gushengda/NDS_crossdist/run_full_lns_transfer.py", line 235, in main
+    wall_times = np.empty((len(names), len(STRATEGIES)), dtype=np.float64)
+                                           ^^^^^^^^^^
+NameError: name 'STRATEGIES' is not defined
