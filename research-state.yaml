@@ -49,9 +49,15 @@ hypotheses:
     priority: high
   - id: H1b
     statement: "A code selected by mean calibration reward across several source distributions improves normalized one-step reward on a held-out same-size distribution relative to a random code."
-    status: active
+    status: supported
     motivation: "The first pilot rejected uniform-only feature kNN but exploratory leave-one-distribution-out analysis found positive multi-source mean-code gains on all six targets."
     parent: H1
+    priority: high
+  - id: H3
+    statement: "A leave-one-distribution-out multi-source code improves fixed-budget full-LNS final cost and anytime area over a random fixed code on fresh same-size target instances."
+    status: active
+    motivation: "H1b passed on fresh instances, but one-step reward must translate into iterative search quality before claiming an automatically generalizing LNS."
+    parent: H1b
     priority: high
   - id: H2
     statement: "Fisher-derived similarity predicts transfer regret beyond ordinary instance features and encoder embeddings."
@@ -63,8 +69,8 @@ hypotheses:
 experiments:
   proxy_metric: "Relative gain in normalized one-step reward of source-selected or kNN-retrieved codes over a random-code baseline, with bootstrap confidence intervals; secondary metrics are split-half code-rank reliability and negative-transfer rate."
   baseline_value: "Uniform-only kNN passed the locked OOD criterion on 1/5 targets."
-  best_value: "Split-half reliability passed on 6/6 distributions; exploratory multi-source mean-code gain was positive on 6/6 leave-one-distribution-out targets."
-  total_runs: 2
+  best_value: "Fresh-seed H1b confirmation passed on 6/6 held-out distributions with +21.4% to +45.3% relative one-step gain and positive bootstrap lower bounds."
+  total_runs: 3
   trajectory:
     - run_id: "smoke_cpu_001"
       hypothesis: "H0/H1 pipeline"
@@ -80,11 +86,18 @@ experiments:
       wall_time_min: 0.38
       change_summary: "64 instances per distribution, 32 codes, 4 replicas on g51 GPU 3; dedicated result branch f4b38a7."
       timestamp: "2026-08-03"
+    - run_id: "multisource-confirm-20260803-073235"
+      hypothesis: "H1b"
+      metric_value: "6/6 held-out distributions passed; 0/6 significantly negative"
+      delta: "Independent fresh-seed confirmation of multi-source transfer"
+      wall_time_min: 0.17
+      change_summary: "Leave-one-distribution-out mean-code selection on seed 20260804; dedicated result branch df393a1."
+      timestamp: "2026-08-03"
 
 outer_loop:
-  cycle: 1
-  last_direction: "Replace single-source uniform memory with distribution-diverse calibration, then confirm on fresh instances before any full-search or Fisher experiment."
-  last_reflection: "The latent code ordering is real and reproducible, but Euclidean feature kNN from one source domain is brittle. Distribution-level code 3 transferred positively across all six observed targets, motivating a pre-registered multi-source confirmation."
+  cycle: 2
+  last_direction: "Test whether confirmed one-step multi-source gains survive 200-iteration full LNS under equal rollout budgets."
+  last_reflection: "H1b replicated on a fresh instance seed with all six confidence intervals positive. The remaining validity gap is iterative search: a good one-step code may converge early or lose to a diverse code panel over time."
 
 workspace:
   findings: "findings.md"
