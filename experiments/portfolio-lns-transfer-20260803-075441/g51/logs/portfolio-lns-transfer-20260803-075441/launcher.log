@@ -1,0 +1,6 @@
+source_commit=d3090afdcf608e12e8ce0635c8af388e652174d8
+host=ubuntu
+gpu=3
+started_at=2026-08-02T23:54:42+00:00
+command=run_full_lns_transfer.py --mode top8 --instances 24 --iterations 200 --rollout-size 32
+finished_at=2026-08-02T23:56:15+00:00

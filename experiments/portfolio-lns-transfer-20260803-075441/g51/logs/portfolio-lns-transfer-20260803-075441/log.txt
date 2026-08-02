@@ -1,0 +1,149 @@
+[1/6][1/3] uniform random_fixed
+[1/6][2/3] uniform multisource_top8
+[1/6][3/3] uniform random_panel
+[2/6][1/3] x_uniform_center random_fixed
+[2/6][2/3] x_uniform_center multisource_top8
+[2/6][3/3] x_uniform_center random_panel
+[3/6][1/3] x_cluster_center random_fixed
+[3/6][2/3] x_cluster_center multisource_top8
+[3/6][3/3] x_cluster_center random_panel
+[4/6][1/3] x_mixed_center random_fixed
+[4/6][2/3] x_mixed_center multisource_top8
+[4/6][3/3] x_mixed_center random_panel
+[5/6][1/3] x_cluster_corner_quad random_fixed
+[5/6][2/3] x_cluster_corner_quad multisource_top8
+[5/6][3/3] x_cluster_corner_quad random_panel
+[6/6][1/3] x_mixed_random_fewlarge random_fixed
+[6/6][2/3] x_mixed_random_fewlarge multisource_top8
+[6/6][3/3] x_mixed_random_fewlarge random_panel
+{
+  "checkpoint": "models/cvrp_100/checkpoint-2000.pt",
+  "checkpoint_epoch": 2000,
+  "device": "cuda:0",
+  "instances_per_distribution": 24,
+  "iterations": 200,
+  "rollout_size": 32,
+  "instance_seed": 20260809,
+  "random_code_seed": 20260810,
+  "code_seed": 20260803,
+  "checkpoints": [
+    0,
+    1,
+    2,
+    5,
+    10,
+    20,
+    50,
+    100,
+    200
+  ],
+  "mode": "top8",
+  "strategies": [
+    "random_fixed",
+    "multisource_top8",
+    "random_panel"
+  ],
+  "multisource_codes": {
+    "uniform": 959,
+    "x_uniform_center": 175,
+    "x_cluster_center": 175,
+    "x_mixed_center": 175,
+    "x_cluster_corner_quad": 959,
+    "x_mixed_random_fewlarge": 175
+  },
+  "uniform_code": 910,
+  "multisource_top8_codes": {
+    "uniform": [
+      959,
+      175,
+      955,
+      303,
+      267,
+      910,
+      762,
+      489
+    ],
+    "x_uniform_center": [
+      175,
+      959,
+      955,
+      303,
+      267,
+      910,
+      762,
+      489
+    ],
+    "x_cluster_center": [
+      175,
+      959,
+      303,
+      955,
+      910,
+      762,
+      267,
+      489
+    ],
+    "x_mixed_center": [
+      175,
+      959,
+      910,
+      955,
+      303,
+      489,
+      267,
+      762
+    ],
+    "x_cluster_corner_quad": [
+      959,
+      910,
+      175,
+      303,
+      955,
+      267,
+      762,
+      313
+    ],
+    "x_mixed_random_fewlarge": [
+      175,
+      959,
+      955,
+      303,
+      910,
+      267,
+      762,
+      489
+    ]
+  },
+  "wall_time_seconds": [
+    [
+      4.507875119335949,
+      4.455352491699159,
+      4.389454955235124
+    ],
+    [
+      4.374184998683631,
+      4.499394645914435,
+      4.386083310469985
+    ],
+    [
+      4.403653720393777,
+      4.465643232688308,
+      4.444703437387943
+    ],
+    [
+      4.409772374667227,
+      4.423655034042895,
+      4.4036604929715395
+    ],
+    [
+      4.3823748072609305,
+      4.43486666213721,
+      4.418314113281667
+    ],
+    [
+      4.92065797932446,
+      4.546833026222885,
+      4.591988448053598
+    ]
+  ]
+}
