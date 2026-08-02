@@ -16,6 +16,8 @@ The broad cross-distribution objective is established in prior neural routing wo
 - This failure is specific to the single-source retrieval rule. Exploratory leave-one-distribution-out selection by mean reward across the other five distributions produced positive point gains on 6/6 targets (+0.003740 to +0.009304). An independent confirmation is required before treating this as evidence.
 - H1b was independently confirmed on fresh instance seed `20260804`: multi-source mean-code transfer passed on 6/6 held-out distributions, with +21.4% to +45.3% relative gain and strictly positive 95% bootstrap lower bounds. No target was significantly negative.
 - On `x_cluster_corner_quad`, uniform-only transfer remained harmful (-0.003927 raw gain) while multi-source transfer was strongly positive (+0.012654, 95% CI [+0.008145, +0.017639]). Distribution diversity is therefore causally relevant to the selection rule, not merely extra calibration volume.
+- H3 failed decisively in full LNS. Repeating the selected code for all 32 rollouts was worse than a random fixed code by 0.28%–1.67% final normalized cost on every distribution, with significant harm on four; it was also 0.64%–2.05% worse than the 32-code panel.
+- The failure begins immediately rather than only after convergence: at iteration one the multi-source code led random fixed on only 3/6 targets. Mean four-replica calibration utility is therefore mismatched to the best-of-32 proposal mechanism used by iterative LNS.
 
 ## Patterns and Insights
 
@@ -32,11 +34,12 @@ The broad cross-distribution objective is established in prior neural routing wo
 - One-step reward is a screening proxy, not evidence of improved full LNS anytime performance.
 - The first inferential GPU run used one instance seed. H1b must be evaluated on a fresh seed with a locked leave-one-distribution-out rule.
 - H1b concerns a single destroy-repair step. It does not establish final solution quality, anytime behavior, or convergence under iterative LNS.
+- A single static latent code collapses proposal diversity. Future automatic adaptation must retain a portfolio or change codes as the incumbent state evolves.
 - Local cppimport compilation requires running outside the restricted Windows sandbox because the compiler creates nested temporary build directories.
 
 ## Open Questions
 
-- Does the confirmed one-step advantage improve 200-iteration full-LNS final cost and anytime area under an equal 32-rollout budget?
+- Can an informed top-8 portfolio with four replicas per code convert multi-source calibration into full-LNS gains over an uninformed 32-code panel?
 - Can a safe router recognize when instance-level retrieval should defer to the multi-source global code?
 - Does the one-step gain translate to improved full-LNS anytime performance after H1b is confirmed?
 
@@ -46,3 +49,4 @@ The broad cross-distribution objective is established in prior neural routing wo
 2. g51 pilot: rejected rollout-noise H0, rejected uniform-only kNN H1, and did not proceed to full search.
 3. Fresh-seed confirmation: H1b passed on 6/6 held-out distributions with no significant negative target.
 4. Current direction: full-LNS translation test (H3), followed by a safe router if fixed-code gains are not uniform; Fisher geometry remains gated.
+5. Full-LNS translation rejected static single-code reuse; current direction is calibrated top-8 diversity (H4), still before Fisher geometry.

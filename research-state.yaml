@@ -55,9 +55,15 @@ hypotheses:
     priority: high
   - id: H3
     statement: "A leave-one-distribution-out multi-source code improves fixed-budget full-LNS final cost and anytime area over a random fixed code on fresh same-size target instances."
-    status: active
+    status: rejected
     motivation: "H1b passed on fresh instances, but one-step reward must translate into iterative search quality before claiming an automatically generalizing LNS."
     parent: H1b
+    priority: high
+  - id: H4
+    statement: "A multi-source top-8 latent portfolio, with four stochastic replicas per code, improves equal-budget full-LNS final cost and anytime area over an uninformed 32-code panel on fresh targets."
+    status: active
+    motivation: "Static single-code H3 failed from the first iteration, indicating that calibration must preserve upper-tail rollout diversity rather than maximize mean one-step reward alone."
+    parent: H3
     priority: high
   - id: H2
     statement: "Fisher-derived similarity predicts transfer regret beyond ordinary instance features and encoder embeddings."
@@ -70,7 +76,7 @@ experiments:
   proxy_metric: "Relative gain in normalized one-step reward of source-selected or kNN-retrieved codes over a random-code baseline, with bootstrap confidence intervals; secondary metrics are split-half code-rank reliability and negative-transfer rate."
   baseline_value: "Uniform-only kNN passed the locked OOD criterion on 1/5 targets."
   best_value: "Fresh-seed H1b confirmation passed on 6/6 held-out distributions with +21.4% to +45.3% relative one-step gain and positive bootstrap lower bounds."
-  total_runs: 3
+  total_runs: 4
   trajectory:
     - run_id: "smoke_cpu_001"
       hypothesis: "H0/H1 pipeline"
@@ -93,11 +99,18 @@ experiments:
       wall_time_min: 0.17
       change_summary: "Leave-one-distribution-out mean-code selection on seed 20260804; dedicated result branch df393a1."
       timestamp: "2026-08-03"
+    - run_id: "full-lns-transfer-20260803-074321"
+      hypothesis: "H3"
+      metric_value: "Final 0/6; anytime AUC 0/6; significant harm 4/6"
+      delta: "Rejected static multi-source single-code transfer for iterative LNS"
+      wall_time_min: 2.02
+      change_summary: "24 fresh instances/distribution, 200 iterations, equal 32-rollout budget; dedicated result branch 1c0c177."
+      timestamp: "2026-08-03"
 
 outer_loop:
-  cycle: 2
-  last_direction: "Test whether confirmed one-step multi-source gains survive 200-iteration full LNS under equal rollout budgets."
-  last_reflection: "H1b replicated on a fresh instance seed with all six confidence intervals positive. The remaining validity gap is iterative search: a good one-step code may converge early or lose to a diverse code panel over time."
+  cycle: 3
+  last_direction: "Preserve cross-distribution calibration as a top-8 portfolio with four replicas per code, matching the calibration noise scale under the same 32-rollout budget."
+  last_reflection: "H3 failed at iteration one on half the distributions and was significantly worse by 200 iterations on four. Mean four-replica utility does not select the code with the strongest best-of-32 tail; static reuse must be replaced by calibrated diversity or online state adaptation."
 
 workspace:
   findings: "findings.md"
