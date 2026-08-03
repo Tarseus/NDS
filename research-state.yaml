@@ -31,8 +31,8 @@ literature:
     - "Reuse adaptation/search state across different instances instead of restarting latent search."
     - "Detect and reject negative transfer under an unknown distribution shift."
   evidence_gaps:
-    - "Whether multi-source distribution-diverse memory confirms positive leave-one-distribution-out transfer on fresh instances."
-    - "Whether instance-level routing can improve over a robust global code without unsafe negative transfer."
+    - "Whether incumbent/search-state features can safely reweight a full latent panel online without collapsing proposal diversity."
+    - "Whether online reweighting can reduce evaluated codes while matching the 32-code panel anytime curve."
 
 hypotheses:
   - id: H0
@@ -61,13 +61,19 @@ hypotheses:
     priority: high
   - id: H4
     statement: "A multi-source top-8 latent portfolio, with four stochastic replicas per code, improves equal-budget full-LNS final cost and anytime area over an uninformed 32-code panel on fresh targets."
-    status: active
+    status: rejected
     motivation: "Static single-code H3 failed from the first iteration, indicating that calibration must preserve upper-tail rollout diversity rather than maximize mean one-step reward alone."
     parent: H3
     priority: high
+  - id: H5
+    statement: "Incumbent-conditioned online code reweighting can retain the full candidate panel while allocating rollout replicas to promising codes, matching or improving the 32-code panel with fewer effective code evaluations."
+    status: pending
+    motivation: "Both single-code and static top-8 memory lost to the 32-code panel; the reusable signal must be conditioned on evolving search state and combined with explicit diversity preservation."
+    parent: H4
+    priority: high
   - id: H2
     statement: "Fisher-derived similarity predicts transfer regret beyond ordinary instance features and encoder embeddings."
-    status: pending
+    status: deferred
     motivation: "Only test geometry after H0 is rejected and H1 has positive signal."
     parent: null
     priority: medium
@@ -76,7 +82,7 @@ experiments:
   proxy_metric: "Relative gain in normalized one-step reward of source-selected or kNN-retrieved codes over a random-code baseline, with bootstrap confidence intervals; secondary metrics are split-half code-rank reliability and negative-transfer rate."
   baseline_value: "Uniform-only kNN passed the locked OOD criterion on 1/5 targets."
   best_value: "Fresh-seed H1b confirmation passed on 6/6 held-out distributions with +21.4% to +45.3% relative one-step gain and positive bootstrap lower bounds."
-  total_runs: 4
+  total_runs: 6
   trajectory:
     - run_id: "smoke_cpu_001"
       hypothesis: "H0/H1 pipeline"
@@ -106,11 +112,25 @@ experiments:
       wall_time_min: 2.02
       change_summary: "24 fresh instances/distribution, 200 iterations, equal 32-rollout budget; dedicated result branch 1c0c177."
       timestamp: "2026-08-03"
+    - run_id: "portfolio-lns-transfer-20260803-075100"
+      hypothesis: "H4 infrastructure"
+      metric_value: null
+      delta: null
+      wall_time_min: 0.02
+      change_summary: "Failed before computation due stale strategy-count constant; logs published as failed result branch 3c66af4."
+      timestamp: "2026-08-03"
+    - run_id: "portfolio-lns-transfer-20260803-075441"
+      hypothesis: "H4"
+      metric_value: "Final 0/6; anytime AUC 0/6; significant primary harm 6/6"
+      delta: "Rejected static top-8 memory against the equal-budget 32-code panel"
+      wall_time_min: 1.55
+      change_summary: "24 fresh instances/distribution, eight LODO codes x four replicas, 200 iterations; dedicated result branch 7b30a2f."
+      timestamp: "2026-08-03"
 
 outer_loop:
-  cycle: 3
-  last_direction: "Preserve cross-distribution calibration as a top-8 portfolio with four replicas per code, matching the calibration noise scale under the same 32-rollout budget."
-  last_reflection: "H3 failed at iteration one on half the distributions and was significantly worse by 200 iterations on four. Mean four-replica utility does not select the code with the strongest best-of-32 tail; static reuse must be replaced by calibrated diversity or online state adaptation."
+  cycle: 4
+  last_direction: "Move from static instance/distribution memory to incumbent-conditioned online allocation over the full code panel; keep Fisher geometry deferred until this baseline exists."
+  last_reflection: "Top-8 selection recovered a small advantage over random fixed codes on five targets, but lost to the full 32-code panel on every target and was significantly harmful on at least one primary metric for all six. Cross-domain code priors are real but too state-dependent to use as a static selector."
 
 workspace:
   findings: "findings.md"
