@@ -1,0 +1,6 @@
+run_id=dynamic-code-transport-pilot-20260803-171205
+source_commit=a2c991e6937eaf2c2470851bf67ddec71a71f792
+checkpoint=models/cvrp_100/checkpoint-2000.pt
+source_memory=/data1/gushengda/NDS_crossdist_runs/multisource-confirm-20260803-073235/raw_metrics.npz
+target_code_mode=resampled
+fixed_target_codes=false
