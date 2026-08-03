@@ -1,0 +1,2 @@
+a37332c06aa5fdd5f9a6fe948c1f2efeffe321c444395724a9eae333854bb11a  /data1/gushengda/NDS_dynamic_transport/models/cvrp_100/checkpoint-2000.pt
+52b80e5efbaa745aa66934b6f7f2fcc6aa104d070cb995a7dc7ab080d580e0cb  /data1/gushengda/NDS_dynamic_transport_runs/dynamic-code-transport-pilot-20260803-172342/raw_dynamic_transport.npz

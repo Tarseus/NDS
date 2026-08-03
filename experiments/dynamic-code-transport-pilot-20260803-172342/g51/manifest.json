@@ -1,0 +1,24 @@
+{
+  "checkpoint": "models/cvrp_100/checkpoint-2000.pt",
+  "checkpoint_epoch": 2000,
+  "source_memory": "/data1/gushengda/NDS_crossdist_runs/multisource-confirm-20260803-073235/raw_metrics.npz",
+  "device": "cuda:0",
+  "instances_per_distribution": 16,
+  "rounds": 4,
+  "rollout_size_per_strategy": 32,
+  "calibration_instances_per_source_distribution": 16,
+  "exploration": 0.5,
+  "prior_strength": 1.0,
+  "ridge": 1.0,
+  "seed": 20260810,
+  "target_codes_are_resampled": true,
+  "fixed_target_codes": false,
+  "wall_time_seconds": [
+    0.17745867371559143,
+    0.042110917158424854,
+    0.04805792775005102,
+    0.04258084110915661,
+    0.05167404655367136,
+    0.04487264342606068
+  ]
+}
