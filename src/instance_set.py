@@ -53,14 +53,14 @@ def _create_instance(
     if problem == "cvrp":
         return NDSOps.Instance(
             problem_size,
-            problem_data.capacity[i],
+            int(np.asarray(problem_data.capacity[i]).reshape(-1)[0]),
             problem_data.depot_node_demand[i],
             problem_data.depot_node_xy[i],
         )
     elif problem == "vrptw":
         return NDSOps.Instance(
             problem_size,
-            problem_data.capacity[i],
+            int(np.asarray(problem_data.capacity[i]).reshape(-1)[0]),
             problem_data.depot_node_demand[i],
             problem_data.depot_node_tw[i, :, 0],
             problem_data.depot_node_tw[i, :, 1],
@@ -70,7 +70,7 @@ def _create_instance(
     elif problem == "pcvrp":
         return NDSOps.Instance(
             problem_size,
-            problem_data.capacity[i],
+            int(np.asarray(problem_data.capacity[i]).reshape(-1)[0]),
             problem_data.depot_node_demand[i],
             problem_data.depot_node_xy[i],
             problem_data.depot_node_prizes[i],
@@ -193,12 +193,15 @@ def _handle_new_instances(
     for i in range(depot_node_xy_np.shape[0]):
         if problem == "cvrp":
             instance = NDSOps.Instance(
-                problem_size, capacity[i], depot_node_demand_np[i], depot_node_xy_np[i]
+                problem_size,
+                int(np.asarray(capacity[i]).reshape(-1)[0]),
+                depot_node_demand_np[i],
+                depot_node_xy_np[i],
             )
         elif problem == "vrptw":
             instance = NDSOps.Instance(
                 problem_size,
-                capacity[i],
+                int(np.asarray(capacity[i]).reshape(-1)[0]),
                 depot_node_demand_np[i],
                 depot_node_tw_np[i, :, 0],
                 depot_node_tw_np[i, :, 1],
@@ -208,7 +211,7 @@ def _handle_new_instances(
         elif problem == "pcvrp":
             instance = NDSOps.Instance(
                 problem_size,
-                capacity[i],
+                int(np.asarray(capacity[i]).reshape(-1)[0]),
                 depot_node_demand_np[i],
                 depot_node_xy_np[i],
                 depot_node_prizes_np[i],
